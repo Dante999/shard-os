@@ -1,0 +1,3 @@
+[submodule "thirdparty/libcutils"]
+	path = thirdparty/libcutils
+	url = git@github.com:Dante999/libcutils.git

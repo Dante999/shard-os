@@ -1,0 +1,5 @@
+https://streams.br.de/bayern1schw_2.m3u
+https://stream.rockantenne.de/rockantenne/stream/mp3
+https://stream.rockantenne.de/80er-rock/stream/mp3
+https://stream.rockantenne.de/heavy-metal/stream/mp3
+
