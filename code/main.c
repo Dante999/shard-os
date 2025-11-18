@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "screen.h"
+#include "ui_main.h"
 
 #include <stdio.h>
 
@@ -44,7 +45,7 @@ int main(int argc, char *argv[])
 	while (!screen.quit) {
 		screen_rendering_start(&screen);
 
-		screen_draw_text(&screen, 0, 0, 48, "Hello World!");
+		ui_main_draw_header(&screen);
 
 		screen_rendering_stop(&screen);
 

@@ -9,7 +9,7 @@
 #define SCREEN_FPS            30
 
 #define SCREEN_BORDER_WIDTH   10
-#define SCREEN_LOGICAL_WIDTH  800
+#define SCREEN_LOGICAL_WIDTH  1024
 #define SCREEN_LOGICAL_HEIGHT 600
 
 #define MAX_OPTION_VALUE_COUNT  5
@@ -20,6 +20,8 @@ struct Screen {
 	SDL_Window     *window;
 	SDL_Renderer   *renderer;
 	TTF_Font       *font;
+	int            mouse_x;
+	int            mouse_y;
 	uint32_t       ticks;
 	bool           quit;
 };

@@ -5,7 +5,10 @@ sdl_gfx            = dependency('SDL2_gfx', include_type: 'system')
 shard_os_sources = [
   'main.c',
   'config.c',
-  'screen.c'
+  'screen.c',
+  'ui_main.c',
+  'ui_elements.c',
+  'ui_radio.c'
 ]
 
 executable('shard-os',

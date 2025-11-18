@@ -120,7 +120,7 @@ void screen_draw_text(struct Screen *screen, int x, int y, int font_size, const 
 	SDL_DestroyTexture(texture);
 }
 
-void screen_draw_box(struct Screen *screen, int x, int y, int width, int height, bool is_selected)
+void screen_draw_box(struct Screen *screen, const int x, const int y, int width, int height, bool is_selected)
 {
 	SDL_Point points[] = {
 		{.x = x                 , .y = y},
@@ -186,8 +186,8 @@ void screen_draw_text_boxed(struct Screen *screen, int x, int y, int font_size, 
 			tmp_surface);
 
 	SDL_Rect text_rect = {
-		.x = x,
-		.y = y,
+		.x = x+TEXT_BORDER,
+		.y = y+TEXT_BORDER,
 		.w = tmp_surface->w,
 		.h = tmp_surface->h
 	};
@@ -196,8 +196,8 @@ void screen_draw_text_boxed(struct Screen *screen, int x, int y, int font_size, 
 
 	screen_draw_box(
 		screen,
-		x-TEXT_BORDER,
-		y-TEXT_BORDER,
+		x,
+		y,
 		MAX(min_width, text_width), // pick greater one
 		text_rect.h+2*TEXT_BORDER,
 		is_selected
@@ -320,6 +320,8 @@ void screen_rendering_start(struct Screen *screen)
 	screen->ticks = SDL_GetTicks();
 
 	SDL_Event event;
+
+	SDL_GetMouseState(&screen->mouse_x, &screen->mouse_y);
 
 	while (SDL_PollEvent(&event)) {
 
