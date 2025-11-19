@@ -208,6 +208,46 @@ void screen_draw_text_boxed(struct Screen *screen, int x, int y, int font_size, 
 	SDL_DestroyTexture(texture);
 }
 
+//#define WINDOW_CLOSE_BUTTON_WIDTH 20
+void screen_draw_window(struct Screen *screen, int x, int y, int width, int height, const char *name)
+{
+	static const int close_button_width = 50;
+	//                           *--\
+	//   *----------------------/    x
+	//  /                            x
+	// *                             x
+	// |                             x
+	// |                             x
+	// |                             x
+	// |                             x
+	// |                             x
+	//  x                           x
+	//   xxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+	const int x_left   = x;
+	const int x_right  = x+width;
+	const int y_top    = y;
+	const int y_bottom = y+height;
+
+	SDL_Point points[] = {
+		{.x = x_left+CORNER_CUT                         , .y = y_top+CORNER_CUT},
+		{.x = x_right-(2*CORNER_CUT)-close_button_width , .y = y_top+CORNER_CUT},
+		{.x = x_right-(1*CORNER_CUT)-close_button_width , .y = y_top},
+		//{.x = x_right-(1*CORNER_CUT)                    , .y = y_top},
+		{.x = x_right                                   , .y = y_top},
+		{.x = x_right                                   , .y = y_bottom-CORNER_CUT},
+		{.x = x_right-CORNER_CUT                        , .y = y_bottom},
+		{.x = x_left+CORNER_CUT                         , .y = y_bottom},
+		{.x = x_left                                    , .y = y_bottom-CORNER_CUT},
+		{.x = x_left                                    , .y = y_top+(2*CORNER_CUT)},
+		{.x = x_left+CORNER_CUT                         , .y = y_top+CORNER_CUT},
+	};
+
+	screen_set_color(screen, SCREEN_COLOR_FONT);
+	SDL_RenderDrawLines(screen->renderer, points, ARRAY_SIZE(points));
+	screen_draw_text(screen, x_left+CORNER_CUT+10, y_top+CORNER_CUT+10, g_config.screen_font_size_l, name);
+	screen_draw_text(screen, x_right-CORNER_CUT-(close_button_width/2), y_top+10, g_config.screen_font_size_l, "x");
+}
 
 static void screen_handle_keypress(struct Screen *screen, SDL_Keysym *key)
 {

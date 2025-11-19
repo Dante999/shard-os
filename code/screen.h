@@ -6,7 +6,7 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
-#define SCREEN_FPS            30
+#define SCREEN_FPS            60
 
 #define SCREEN_BORDER_WIDTH   10
 #define SCREEN_LOGICAL_WIDTH  1024
@@ -38,6 +38,7 @@ void screen_rendering_start(struct Screen *screen);
 void screen_rendering_stop(struct Screen *screen);
 
 void screen_set_color(struct Screen *screen, enum Screen_Color color);
+void screen_draw_window(struct Screen *screen, int x, int y, int width, int height, const char *name);
 void screen_draw_text(struct Screen *screen, int x, int y, int font_size, const char *fmt, ...);
 void screen_draw_text_boxed(struct Screen *screen, int x, int y, int font_size, int min_width, bool is_selected, const char *fmt, ...);
 void screen_draw_box(struct Screen *screen, int x, int y, int width, int height, bool is_selected);
