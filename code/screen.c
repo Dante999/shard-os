@@ -69,6 +69,40 @@ static Result screen_load_ttf_font(struct Screen *screen, const char *filepath)
 	return result_make_success();
 }
 
+struct Screen_Dimension screen_get_text_dimension(struct Screen *screen, int font_size, const char *fmt, ...)
+{
+	if ( fmt == NULL || strlen(fmt) == 0) {
+		struct Screen_Dimension retval = {0};
+		return retval;
+	}
+
+	char buffer[1024];
+
+	va_list arg_list;
+	va_start(arg_list, fmt);
+	vsnprintf(buffer, sizeof(buffer), fmt, arg_list);
+	va_end(arg_list);
+
+	// quickfix, draw anything to avoid tmp_surface is null
+	if (strlen(buffer) == 0) {
+		buffer[0] = ' ';
+		buffer[1] = '\0';
+	}
+
+	TTF_SetFontSize(screen->font, font_size);
+
+	SDL_Color font_color = {0};
+
+	SDL_Surface *tmp_surface = TTF_RenderText_Blended(
+			screen->font,
+			buffer,
+			font_color
+			);
+	struct Screen_Dimension retval = {.w = tmp_surface->w, .h = tmp_surface->h};
+	SDL_FreeSurface(tmp_surface);
+
+	return retval;
+}
 
 void screen_draw_text(struct Screen *screen, int x, int y, int font_size, const char *fmt, ...)
 {
