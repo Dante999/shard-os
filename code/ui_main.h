@@ -3,6 +3,7 @@
 
 #include "screen.h"
 
+void ui_main_init(struct Screen *screen);
 void ui_main_draw_header(struct Screen *screen);
 
 

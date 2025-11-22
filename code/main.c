@@ -42,6 +42,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	ui_main_init(&screen);
+
 	while (!screen.quit) {
 		screen_rendering_start(&screen);
 

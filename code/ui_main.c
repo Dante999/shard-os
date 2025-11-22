@@ -11,6 +11,11 @@
 #define UI_STATUS_BAR_DATETIME_X_START 840
 #define UI_WINDOW_BORDER               20
 
+void ui_main_init(struct Screen *screen)
+{
+	ui_radio_init(screen, "radiostations.txt");
+}
+
 void ui_main_draw_header(struct Screen *screen)
 {
 	//log_debug("mouse: x=%4d y=%4d\n", screen->mouse_x, screen->mouse_y);
