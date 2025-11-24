@@ -1,8 +1,10 @@
 #include "ui_radio.h"
 
 #include "ui_elements.h"
+#include "config.h"
 
 #include "libcutils/util_makros.h"
+#include "libcutils/config_file.h"
 
 struct Radio_Station {
 	char name[40];
@@ -30,16 +32,23 @@ static void radiostation_add(struct Radio_Station_List *list, const char *name, 
 void ui_radio_init(struct Screen *screen, const char *filepath)
 {
 	(void) filepath;
+	char fullpath[255];
+
+	snprintf(fullpath, sizeof(fullpath), "%s/%s", g_config.resources_dir, filepath);
+	printf("Trying to load %s\n", fullpath);
+	struct Config_File cfg = {0};
+	Result res = config_file_init(&cfg, fullpath);
+	config_file_print(&cfg);
+
+	if (!res.success) {
+		printf("ERROR: failed to load radio stations: %s\n", res.msg);
+		return;
+	}
 
 	g_radio_stations.count = 0;
-	// TODO: Read from config file
-	radiostation_add(&g_radio_stations, "Rock Antenne - National"    , "http://localhost");
-	radiostation_add(&g_radio_stations, "Rock Antenne - Hard Rock"   , "http://localhost");
-	radiostation_add(&g_radio_stations, "Rock Antenne - Modern Metal", "http://localhost");
-	radiostation_add(&g_radio_stations, "Bayern 1"                   , "http://localhost");
-	radiostation_add(&g_radio_stations, "Ego FM"                     , "http://localhost");
-	radiostation_add(&g_radio_stations, "Radio Bob - National"       , "http://localhost");
-	radiostation_add(&g_radio_stations, "Light FM"                   , "http://localhost");
+	for (size_t i=0; i < cfg.count; ++i) {
+		radiostation_add(&g_radio_stations, cfg.keys[i], cfg.values[i]);
+	}
 
 	ui_clickable_list_clear(&g_clickable_list);
 

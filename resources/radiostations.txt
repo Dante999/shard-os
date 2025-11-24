@@ -1,5 +1,8 @@
-https://streams.br.de/bayern1schw_2.m3u
-https://stream.rockantenne.de/rockantenne/stream/mp3
-https://stream.rockantenne.de/80er-rock/stream/mp3
-https://stream.rockantenne.de/heavy-metal/stream/mp3
-
+Bayern 1                   = https://streams.br.de/bayern1schw_2.m3u
+Rock Antenne - National    = https://stream.rockantenne.de/rockantenne/stream/mp3
+Rock Antenne - 80er        = https://stream.rockantenne.de/80er-rock/stream/mp3
+Rock Antenne - Heavy Metal = https://stream.rockantenne.de/heavy-metal/stream/mp3
+Radio Bob - National       = http://streams.radiobob.de/bob-national/mp3-192/mediaplayer
+Radio Bob - Harte Saite    = http://streams.radiobob.de/bob-hartesaite/mp3-192/mediaplayer
+Radio Bob - 80er           = http://streams.radiobob.de/bob-80srock/mp3-192/mediaplayer
+Radio Bob - Rockparty      = http://streams.radiobob.de/rockparty/mp3-192/mediaplayer/
