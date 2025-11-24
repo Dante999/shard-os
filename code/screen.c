@@ -41,7 +41,7 @@ void screen_set_color(struct Screen *screen, enum Screen_Color color)
 	}
 
 	if (ptr != NULL) {
-		SDL_SetRenderDrawColor(screen->renderer, ptr->r, ptr->g, ptr->b, ptr->a);
+		SDL_SetRenderDrawColor(screen->renderer, (uint8_t)ptr->r, (uint8_t)ptr->g, (uint8_t)ptr->b, (uint8_t)ptr->a);
 	}
 }
 
@@ -396,6 +396,7 @@ void screen_rendering_start(struct Screen *screen)
 	SDL_Event event;
 
 	SDL_GetMouseState(&screen->mouse_x, &screen->mouse_y);
+	screen->mouse_clicked = false;
 
 	while (SDL_PollEvent(&event)) {
 
@@ -407,6 +408,10 @@ void screen_rendering_start(struct Screen *screen)
 		case SDL_KEYDOWN:
 			screen_handle_keypress(screen, &event.key.keysym);
 			break;
+		case SDL_MOUSEBUTTONDOWN:
+			screen->mouse_clicked = true; // we don't care which mouse
+					      // button
+
 		}
 	}
 

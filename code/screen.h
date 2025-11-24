@@ -22,6 +22,7 @@ struct Screen {
 	TTF_Font       *font;
 	int            mouse_x;
 	int            mouse_y;
+	bool           mouse_clicked;
 	uint32_t       ticks;
 	bool           quit;
 };

@@ -5,6 +5,7 @@
 
 #include "libcutils/util_makros.h"
 #include "libcutils/config_file.h"
+#include "libcutils/logger.h"
 
 struct Radio_Station {
 	char name[40];
@@ -18,6 +19,12 @@ struct Radio_Station_List {
 
 struct Ui_Clickable_List  g_clickable_list = {0};
 struct Radio_Station_List g_radio_stations = {0};
+
+static void on_radio_station_clicked(int index)
+{
+	log_debug("Radiostation[%d] clicked!\n", index);
+	// TODO:
+}
 
 static void radiostation_add(struct Radio_Station_List *list, const char *name, const char *url)
 {
@@ -56,6 +63,8 @@ void ui_radio_init(struct Screen *screen, const char *filepath)
 	for (size_t i=0; i < g_radio_stations.count; ++i) {
 		ui_clickable_list_append(screen, &g_clickable_list, g_radio_stations.items[i].name);
 	}
+
+	g_clickable_list.on_click = on_radio_station_clicked;
 }
 
 void ui_radio_render(struct Screen *screen)

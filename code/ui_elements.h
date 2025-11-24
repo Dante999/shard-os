@@ -9,15 +9,17 @@ enum Ui_Border {
 };
 
 struct Ui_Button {
+	char id[40];
 	int x;
 	int y;
 	int w;
 	int h;
 	char text[40];
-	void (*on_click)(void *data);
+	void (*on_click)(struct Ui_Button *btn);
 	int font_size;
 	enum Ui_Border border;
 	bool is_selectable;
+	void *user_data;
 };
 
 
@@ -40,7 +42,13 @@ struct Ui_Clickable_List {
 	} internal;
 };
 
-void ui_button_init(struct Screen *screen, struct Ui_Button *btn, int x, int y, const char *text);
+void ui_button_init(
+	struct Screen *screen,
+	struct Ui_Button *btn,
+	const char *id, int x, int y,
+	const char *text,
+	void (*on_click)(struct Ui_Button *btn));
+
 void ui_button_render(struct Screen *screen, struct Ui_Button *btn);
 void ui_clickable_list_init(struct Screen *screen, struct Ui_Clickable_List *list, int x, int y, int w, size_t items_per_page);
 void ui_clickable_list_clear(struct Ui_Clickable_List *list);
