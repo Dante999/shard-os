@@ -154,6 +154,12 @@ void screen_draw_text(struct Screen *screen, int x, int y, int font_size, const 
 	SDL_DestroyTexture(texture);
 }
 
+void screen_draw_line(struct Screen *screen, int x0, int y0, int x1, int y1)
+{
+	screen_set_color(screen, SCREEN_COLOR_FONT);
+	SDL_RenderDrawLine(screen->renderer, x0, y0, x1, y1);
+}
+
 void screen_draw_box(struct Screen *screen, const int x, const int y, int width, int height, bool is_selected)
 {
 	SDL_Point points[] = {
@@ -179,6 +185,29 @@ void screen_draw_box(struct Screen *screen, const int x, const int y, int width,
 
 	screen_set_color(screen, SCREEN_COLOR_FONT);
 	SDL_RenderDrawLines(screen->renderer, points, ARRAY_SIZE(points));
+}
+
+void screen_draw_box_filled(struct Screen *screen, int x, int y, int width, int height, enum Screen_Color color)
+{
+	// TODO: merge with screen_draw_box
+	SDL_Point points[] = {
+		{.x = x                 , .y = y},
+		{.x = x+width           , .y = y},
+		{.x = x+width           , .y = y+height-CORNER_CUT},
+		{.x = x+width-CORNER_CUT, .y = y+height},
+		{.x = x                 , .y = y+height},
+		{.x = x                 , .y = y},
+	};
+
+		int16_t x_vec[ARRAY_SIZE(points)];
+		int16_t y_vec[ARRAY_SIZE(points)];
+
+		for (size_t i=0; i < ARRAY_SIZE(points); ++i) {
+			x_vec[i] = (int16_t) points[i].x;
+			y_vec[i] = (int16_t) points[i].y;
+		}
+		struct Color *col = &g_config.screen_color_font;
+		filledPolygonRGBA(screen->renderer, x_vec, y_vec, ARRAY_SIZE(points), (uint8_t) col->r, (uint8_t) col->g, (uint8_t) col->b, (uint8_t) col->a);
 }
 
 void screen_draw_text_boxed(struct Screen *screen, int x, int y, int font_size, int min_width, bool is_selected, const char *fmt, ...)
@@ -276,6 +305,18 @@ void screen_draw_window(struct Screen *screen, int x, int y, int width, int heig
 		{.x = x_left                                    , .y = y_top+(2*CORNER_CUT)},
 		{.x = x_left+CORNER_CUT                         , .y = y_top+CORNER_CUT},
 	};
+
+	if (true) {
+		int16_t x_vec[ARRAY_SIZE(points)];
+		int16_t y_vec[ARRAY_SIZE(points)];
+
+		for (size_t i=0; i < ARRAY_SIZE(points); ++i) {
+			x_vec[i] = (int16_t) points[i].x;
+			y_vec[i] = (int16_t) points[i].y;
+		}
+		struct Color *col = &g_config.screen_color_highlight;
+		filledPolygonRGBA(screen->renderer, x_vec, y_vec, ARRAY_SIZE(points), (uint8_t) col->r, (uint8_t) col->g, (uint8_t) col->b, (uint8_t) col->a);
+	}
 
 	screen_set_color(screen, SCREEN_COLOR_FONT);
 	SDL_RenderDrawLines(screen->renderer, points, ARRAY_SIZE(points));

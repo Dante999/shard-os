@@ -6,3 +6,5 @@ Radio Bob - National       = http://streams.radiobob.de/bob-national/mp3-192/med
 Radio Bob - Harte Saite    = http://streams.radiobob.de/bob-hartesaite/mp3-192/mediaplayer
 Radio Bob - 80er           = http://streams.radiobob.de/bob-80srock/mp3-192/mediaplayer
 Radio Bob - Rockparty      = http://streams.radiobob.de/rockparty/mp3-192/mediaplayer/
+Rock FM                    = https://stream.regenbogen2.de/dab/mp3-128/private
+Burn FM                    = https://burnfm.radionetz.de/burn-fm.mp3

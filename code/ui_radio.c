@@ -19,6 +19,7 @@ struct Radio_Station_List {
 
 struct Ui_Clickable_List  g_clickable_list = {0};
 struct Radio_Station_List g_radio_stations = {0};
+struct Ui_Media_Player    g_player         = {0};
 
 static void on_radio_station_clicked(int index)
 {
@@ -59,16 +60,22 @@ void ui_radio_init(struct Screen *screen, const char *filepath)
 
 	ui_clickable_list_clear(&g_clickable_list);
 
-	ui_clickable_list_init(screen, &g_clickable_list, 520, 180, 460, 6);
+	ui_clickable_list_init(screen, &g_clickable_list, 520, 220, 460, 7);
 	for (size_t i=0; i < g_radio_stations.count; ++i) {
 		ui_clickable_list_append(screen, &g_clickable_list, g_radio_stations.items[i].name);
 	}
 
 	g_clickable_list.on_click = on_radio_station_clicked;
+
+	ui_media_player_init(screen, &g_player, 50, 220, 450, 300);
+	snprintf(g_player.first_line , sizeof(g_player.first_line) , "Arch Enemy");
+	snprintf(g_player.second_line, sizeof(g_player.second_line), "The Eagle Flies Alone");
+
 }
 
 void ui_radio_render(struct Screen *screen)
 {
 	ui_clickable_list_render(screen, &g_clickable_list);
+	ui_media_player_render(screen, &g_player);
 }
 

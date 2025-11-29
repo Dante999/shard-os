@@ -42,6 +42,30 @@ struct Ui_Clickable_List {
 	} internal;
 };
 
+struct Ui_Media_Player {
+	int x;
+	int y;
+	int w;
+	int h;
+	char first_line[40];
+	char second_line[40];
+	int track_pos_sec;
+	int track_len_sec;
+	struct {
+		struct {
+			int x;
+			int y;
+			int w;
+		} progress_bar;
+		struct Ui_Button button_prev;
+		struct Ui_Button button_rewind;
+		struct Ui_Button button_play;
+		struct Ui_Button button_forward;
+		struct Ui_Button button_next;
+	} internal;
+
+};
+
 void ui_button_init(
 	struct Screen *screen,
 	struct Ui_Button *btn,
@@ -50,6 +74,13 @@ void ui_button_init(
 	void (*on_click)(struct Ui_Button *btn));
 
 void ui_button_render(struct Screen *screen, struct Ui_Button *btn);
+
+void ui_media_player_init(
+	struct Screen *screen,
+	struct Ui_Media_Player *player,
+	int x, int y, int w, int h);
+void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *player);
+
 void ui_clickable_list_init(struct Screen *screen, struct Ui_Clickable_List *list, int x, int y, int w, size_t items_per_page);
 void ui_clickable_list_clear(struct Ui_Clickable_List *list);
 void ui_clickable_list_append(struct Screen *screen, struct Ui_Clickable_List *list, const char *text);

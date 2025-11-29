@@ -45,11 +45,14 @@ void screen_rendering_stop(struct Screen *screen);
 
 struct Screen_Dimension screen_get_text_dimension(struct Screen *screen, int font_size, const char *fmt, ...);
 
+void screen_draw_line(struct Screen *screen, int x0, int y0, int x1, int y1);
+
 void screen_set_color(struct Screen *screen, enum Screen_Color color);
 void screen_draw_window(struct Screen *screen, int x, int y, int width, int height, const char *name);
 void screen_draw_text(struct Screen *screen, int x, int y, int font_size, const char *fmt, ...);
 void screen_draw_text_boxed(struct Screen *screen, int x, int y, int font_size, int min_width, bool is_selected, const char *fmt, ...);
 void screen_draw_box(struct Screen *screen, int x, int y, int width, int height, bool is_selected);
+void screen_draw_box_filled(struct Screen *screen, int x, int y, int width, int height, enum Screen_Color color);
 
 
 #endif // SCREEN_H

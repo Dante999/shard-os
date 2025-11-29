@@ -6,7 +6,27 @@
 #include "libcutils/logger.h"
 #include "libcutils/util_makros.h"
 
-#define UI_BUTTON_BORDER_WIDTH 10
+#define UI_BUTTON_BORDER_WIDTH 7
+#define UI_BUTTON_FONT_SIZE    g_config.screen_font_size_s
+
+#define UI_CLICKABLE_LIST_ENTRY_FACTOR (UI_BUTTON_FONT_SIZE+2*UI_BUTTON_BORDER_WIDTH+10)
+#define UI_MEDIA_PLAYER_CLEARANCE 10
+
+struct Audio_Len {
+	int h;
+	int m;
+	int s;
+};
+
+struct Audio_Len seconds_to_len(int seconds){
+	struct Audio_Len len = {0};
+
+	len.h = seconds / 3600;
+	len.m = (seconds - (len.h*3600)) / 60;
+	len.s = seconds % 60;
+
+	return len;
+}
 
 static void on_clickable_list_button_pressed(struct Ui_Button *btn)
 {
@@ -55,7 +75,7 @@ void ui_button_init(
 	const char *text,
 	void (*on_click)(struct Ui_Button *btn))
 {
-	btn->font_size = g_config.screen_font_size_s;
+	btn->font_size = UI_BUTTON_FONT_SIZE;
 	strncpy(btn->text, text, sizeof(btn->text));
 	strncpy(btn->id, id, sizeof(btn->text));
 
@@ -96,7 +116,7 @@ void ui_clickable_list_init(struct Screen *screen, struct Ui_Clickable_List *lis
 
 
 	const int x_center     = list->x + (list->w/2);
-	const int y_pagination = list->y + (int)(list->items_per_page)*50+20;
+	const int y_pagination = list->y + (int)(list->items_per_page)*UI_CLICKABLE_LIST_ENTRY_FACTOR;
 
 	const int page_clearance    = 30;
 	const int page_button_width = 70;
@@ -125,7 +145,10 @@ void ui_clickable_list_append(struct Screen *screen, struct Ui_Clickable_List *l
 
 	char buffer[40];
 	snprintf(buffer, sizeof(buffer), "%zu", list->internal.count);
-	ui_button_init(screen, btn, buffer, list->x, list->y + (int)((list->internal.count-1) * 50), text, on_clickable_list_button_pressed);
+	ui_button_init(screen, btn, buffer,
+		list->x, list->y + (int)((list->internal.count) * UI_CLICKABLE_LIST_ENTRY_FACTOR),
+		text, on_clickable_list_button_pressed);
+
 	btn->user_data = list;
 	btn->w = list->w;
 
@@ -154,4 +177,139 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 	ui_button_render(screen, btn_prev);
 	ui_button_render(screen, btn_index);
 	ui_button_render(screen, btn_next);
+}
+
+void ui_media_player_init(
+	struct Screen *screen,
+	struct Ui_Media_Player *player,
+	int x, int y, int w, int h)
+{
+
+	player->x = x;
+	player->y = y;
+	player->w = w;
+	player->h = h;
+
+	const int x_center     = x + (w/2);
+	const int button_width = 70;
+	const int y_button     = y+h-UI_BUTTON_BORDER_WIDTH*2-UI_BUTTON_FONT_SIZE-UI_MEDIA_PLAYER_CLEARANCE;
+	const int y_progress   = y_button-40;
+	const int button_clearance = 20;
+
+	ui_button_init(screen, &player->internal.button_play, "play_button",
+		x_center-button_width/2,
+		y_button, "Play", NULL);
+
+	ui_button_init(screen, &player->internal.button_rewind, "rewind_button",
+		x_center-button_width/2-button_clearance-button_width,
+		y_button, "Rew", NULL);
+
+	ui_button_init(screen, &player->internal.button_prev, "prev_button",
+		x_center-button_width/2-2*button_clearance-2*button_width,
+		y_button, "Prev", NULL);
+
+	ui_button_init(screen, &player->internal.button_forward, "forward_button",
+		x_center+button_width/2+button_clearance,
+		y_button, "Fwd", NULL);
+
+	ui_button_init(screen, &player->internal.button_next, "next_button",
+		x_center+button_width/2+2*button_clearance+button_width,
+		y_button, "Next", NULL);
+
+	player->internal.button_play.w    = button_width;
+	player->internal.button_prev.w    = button_width;
+	player->internal.button_next.w    = button_width;
+	player->internal.button_rewind.w  = button_width;
+	player->internal.button_forward.w = button_width;
+
+	player->internal.progress_bar.x = x+UI_MEDIA_PLAYER_CLEARANCE;
+	player->internal.progress_bar.y = y_progress;
+	player->internal.progress_bar.w = w-2*UI_MEDIA_PLAYER_CLEARANCE;
+
+}
+
+void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *player)
+{
+	screen_draw_box(screen, player->x, player->y, player->w, player->h, false);
+	const int font_size_first_line  = g_config.screen_font_size_m;
+	const int font_size_second_line = g_config.screen_font_size_s;
+
+	screen_draw_text(screen,
+			player->x + 40,
+			player->y + 30,
+			font_size_first_line,
+			player->first_line);
+
+	screen_draw_text(screen,
+			player->x + 40,
+			player->y + 30 + font_size_first_line + 10,
+			font_size_second_line,
+			player->second_line);
+
+	ui_button_render(screen, &player->internal.button_play);
+	ui_button_render(screen, &player->internal.button_rewind);
+	ui_button_render(screen, &player->internal.button_prev);
+	ui_button_render(screen, &player->internal.button_next);
+	ui_button_render(screen, &player->internal.button_forward);
+
+	struct Audio_Len track_pos = seconds_to_len(player->track_pos_sec);
+	struct Audio_Len track_len = seconds_to_len(player->track_len_sec);
+
+	char buffer[20];
+
+#if 0 
+	char fmt[50];
+
+	if (track_len.h == 0) strcpy(fmt, "%02d:%02d");
+	else                  strcpy(fmt, "%02d:%02d:%02d");
+
+
+	if (track_pos.h == 0) {
+		snprintf(buffer, sizeof(buffer), "%02d:%02d", track_pos.m, track_pos.s);
+	}
+	else {
+		snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", track_pos.h, track_pos.m, track_pos.s);
+	}
+	screen_get_text_dimension(
+#else
+	snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", track_pos.h, track_pos.m, track_pos.s);
+#endif
+
+	screen_draw_text(
+		screen, 
+		player->internal.progress_bar.x,
+		player->internal.progress_bar.y,
+		g_config.screen_font_size_xs,
+		buffer);
+
+	snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", track_len.h, track_len.m, track_len.s);
+	screen_draw_text(
+		screen, 
+		player->internal.progress_bar.x+player->internal.progress_bar.w-80,
+		player->internal.progress_bar.y,
+		g_config.screen_font_size_xs,
+		buffer);
+
+	{ // progress bar
+		int x_start = player->internal.progress_bar.x;
+		int x_end   = player->internal.progress_bar.x+player->internal.progress_bar.w;
+		int y       = player->internal.progress_bar.y-20;
+
+		screen_draw_line( screen, x_start, y, x_end, y);
+
+		float progress = 0.5; // TODO: calculate
+
+		const int slider_w = 50;
+		const int slider_h = 20;
+
+		// TODO: handle boundaries like min/max pos
+		screen_draw_box_filled(
+			screen,
+			x_start + (int)((float)player->internal.progress_bar.w*progress),
+			y-slider_h/2,
+			slider_w,
+			slider_h,
+			true);
+	}
+
 }
