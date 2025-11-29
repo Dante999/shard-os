@@ -8,6 +8,11 @@ enum Ui_Border {
 	UI_BORDER_NORMAL
 };
 
+enum Button_Type {
+	BUTTON_TYPE_TEXT,
+	BUTTON_TYPE_ICON
+};
+
 struct Ui_Button {
 	char id[40];
 	int x;
@@ -15,6 +20,7 @@ struct Ui_Button {
 	int w;
 	int h;
 	char text[40];
+	enum Button_Type type;
 	void (*on_click)(struct Ui_Button *btn);
 	int font_size;
 	enum Ui_Border border;
@@ -71,6 +77,13 @@ void ui_button_init(
 	struct Ui_Button *btn,
 	const char *id, int x, int y,
 	const char *text,
+	void (*on_click)(struct Ui_Button *btn));
+
+void ui_button_init_icon(
+	struct Screen *screen,
+	struct Ui_Button *btn,
+	const char *id, int x, int y, int w,
+	const char *icon,
 	void (*on_click)(struct Ui_Button *btn));
 
 void ui_button_render(struct Screen *screen, struct Ui_Button *btn);

@@ -6,12 +6,12 @@
 #include <assert.h>
 
 #include <SDL.h>
+#include <SDL_image.h>
 #include <SDL_video.h>
 #include <SDL_ttf.h>
 #include <SDL_keycode.h>
 #include <SDL_timer.h>
 #include <SDL2_gfxPrimitives.h>
-
 #include "libcutils/logger.h"
 #include "libcutils/util_makros.h"
 
@@ -102,6 +102,40 @@ struct Screen_Dimension screen_get_text_dimension(struct Screen *screen, int fon
 	SDL_FreeSurface(tmp_surface);
 
 	return retval;
+}
+
+void screen_draw_icon(struct Screen *screen, int x, int y, int width, int height, const char *name)
+{
+	SDL_Surface *tmp_surface = IMG_Load(name);
+	if (tmp_surface == NULL) {
+		printf("ERROR: unable to load %s!\n", name);
+		return; // TODO: Error
+	}
+
+
+	SDL_Texture *texture = SDL_CreateTextureFromSurface(
+			screen->renderer,
+			tmp_surface);
+	
+	SDL_Color font_color = {
+		.r = (uint8_t) g_config.screen_color_font.r,
+		.g = (uint8_t) g_config.screen_color_font.g,
+		.b = (uint8_t) g_config.screen_color_font.b,
+		.a = (uint8_t) g_config.screen_color_font.a,
+	};
+	SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+	SDL_SetTextureColorMod(texture, font_color.r, font_color.g, font_color.b);   // tint multiplier for RGB
+	SDL_SetTextureAlphaMod(texture, font_color.a);         // overall alpha
+	SDL_Rect text_rect = {
+		.x = x,
+		.y = y,
+		.w = width,
+		.h = height
+	};
+
+	SDL_FreeSurface(tmp_surface);
+	SDL_RenderCopy(screen->renderer, texture, NULL, &text_rect);
+	SDL_DestroyTexture(texture);
 }
 
 void screen_draw_text(struct Screen *screen, int x, int y, int font_size, const char *fmt, ...)

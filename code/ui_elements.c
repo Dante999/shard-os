@@ -68,6 +68,29 @@ static void on_clickable_list_button_pressed(struct Ui_Button *btn)
 	}
 }
 
+void ui_button_init_icon(
+	struct Screen *screen,
+	struct Ui_Button *btn,
+	const char *id, int x, int y, int w,
+	const char *icon,
+	void (*on_click)(struct Ui_Button *btn))
+{
+	(void) screen;
+
+	btn->font_size = UI_BUTTON_FONT_SIZE;
+	strncpy(btn->text, icon, sizeof(btn->text));
+	strncpy(btn->id, id, sizeof(btn->text));
+
+	btn->type     = BUTTON_TYPE_ICON;
+	btn->x        = x;
+	btn->y        = y;
+	btn->w        = w;
+	btn->h        = UI_BUTTON_FONT_SIZE+2*UI_BUTTON_BORDER_WIDTH;
+	btn->border   = UI_BORDER_NORMAL;
+	btn->on_click = on_click;
+	btn->is_selectable = true;
+}
+
 void ui_button_init(
 	struct Screen *screen,
 	struct Ui_Button *btn,
@@ -99,7 +122,17 @@ void ui_button_render(struct Screen *screen, struct Ui_Button *btn)
 	}
 
 	screen_draw_box(screen, btn->x, btn->y, btn->w, btn->h, is_selected);
-	screen_draw_text(screen, btn->x+UI_BUTTON_BORDER_WIDTH, btn->y+UI_BUTTON_BORDER_WIDTH, btn->font_size, btn->text);
+
+	if (btn->type == BUTTON_TYPE_TEXT) {
+		screen_draw_text(screen, btn->x+UI_BUTTON_BORDER_WIDTH, btn->y+UI_BUTTON_BORDER_WIDTH, btn->font_size, btn->text);
+	}
+	else if (btn->type == BUTTON_TYPE_ICON) {
+		char path[512];
+		snprintf(path, sizeof(path), "%s/icons/%s", g_config.resources_dir, btn->text);
+		screen_draw_icon(screen, 
+			btn->x+UI_BUTTON_BORDER_WIDTH, btn->y+UI_BUTTON_BORDER_WIDTH, 
+			btn->font_size, btn->font_size, path);
+	}
 
 	if (is_selected && screen->mouse_clicked && btn->on_click != NULL) {
 		btn->on_click(btn);
@@ -122,7 +155,14 @@ void ui_clickable_list_init(struct Screen *screen, struct Ui_Clickable_List *lis
 	const int page_button_width = 70;
 	const int page_index_width  = 50;
 	const int nav_page_width    = page_button_width*2 + page_index_width + 2*page_clearance;
-	ui_button_init(screen, &list->internal.button_prev_page , "btn_prev" , x_center-nav_page_width/2, y_pagination, "prev", on_clickable_list_button_pressed);
+	ui_button_init_icon(screen, &list->internal.button_prev_page , 
+		"btn_prev" , 
+		x_center-nav_page_width/2, y_pagination, 
+		UI_BUTTON_FONT_SIZE*2,
+		"arrow-left-64x64.png", on_clickable_list_button_pressed);
+
+
+	//ui_button_init(screen, &list->internal.button_prev_page , "btn_prev" , x_center-nav_page_width/2, y_pagination, "prev", on_clickable_list_button_pressed);
 	ui_button_init(screen, &list->internal.button_page_index, "btn_index", x_center-page_index_width/2, y_pagination, "0", on_clickable_list_button_pressed);
 	ui_button_init(screen, &list->internal.button_next_page , "btn_next" , x_center+nav_page_width/2-page_button_width, y_pagination, "next", on_clickable_list_button_pressed);
 
