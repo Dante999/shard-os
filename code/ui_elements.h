@@ -38,7 +38,16 @@ struct Ui_Box {
 	bool is_selectable;
 };
 
-# define UI_LIST_MAX_ITEMS  40
+struct Ui_Window {
+	const char *name;
+	int x;
+	int y;
+	int w;
+	int h;
+	bool should_close;
+};
+
+#define UI_LIST_MAX_ITEMS  40
 
 struct Ui_Clickable_List {
 	int x;
@@ -97,6 +106,7 @@ void ui_button_init_icon(
 
 void ui_button_render(struct Screen *screen, struct Ui_Button *btn);
 void ui_box_render(struct Screen *screen, struct Ui_Box *box);
+void ui_window_render(struct Screen *screen, struct Ui_Window *window);
 
 void ui_media_player_init(
 	struct Screen *screen,

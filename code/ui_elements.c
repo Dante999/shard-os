@@ -128,6 +128,29 @@ void ui_box_render(struct Screen *screen, struct Ui_Box *box)
 	}
 }
 
+static void on_ui_window_close(struct Ui_Button *btn)
+{
+	struct Ui_Window *window = (struct Ui_Window*) btn->user_data;
+	window->should_close = true;
+}
+
+void ui_window_render(struct Screen *screen, struct Ui_Window *window)
+{
+
+	struct Ui_Button close_btn = {0};
+	ui_button_init(screen, &close_btn, "close", window->x+window->w-50, window->y+10, "X", on_ui_window_close);
+	close_btn.w         = 40;
+	close_btn.on_click  = on_ui_window_close;
+	close_btn.user_data = window;
+	close_btn.border    = UI_BORDER_NONE;
+
+	screen_draw_window(screen, window->x, window->y,
+			window->w, window->h, window->name);
+
+	ui_button_render(screen, &close_btn);
+
+}
+
 void ui_button_render(struct Screen *screen, struct Ui_Button *btn)
 {
 	bool is_selected = false;
@@ -137,7 +160,9 @@ void ui_button_render(struct Screen *screen, struct Ui_Button *btn)
 		is_selected = true;
 	}
 
-	screen_draw_box(screen, btn->x, btn->y, btn->w, btn->h, is_selected);
+	if (btn->border == UI_BORDER_NORMAL || (btn->border == UI_BORDER_NONE && is_selected)) {
+		screen_draw_box(screen, btn->x, btn->y, btn->w, btn->h, is_selected);
+	}
 
 	if (btn->type == BUTTON_TYPE_TEXT) {
 		screen_draw_text(screen, btn->x+UI_BUTTON_BORDER_WIDTH, btn->y+UI_BUTTON_BORDER_WIDTH, btn->font_size, btn->text);

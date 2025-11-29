@@ -122,8 +122,22 @@ void ui_main_render(struct Screen *screen)
 		struct App *active_app = &g_apps[g_active_app_idx];
 
 		const int window_y_pos = SCREEN_BORDER_WIDTH+UI_STATUS_BAR_HEIGHT+UI_WINDOW_BORDER;
-		screen_draw_window(screen,UI_WINDOW_BORDER, window_y_pos, SCREEN_LOGICAL_WIDTH-2*UI_WINDOW_BORDER, SCREEN_LOGICAL_HEIGHT-window_y_pos-UI_WINDOW_BORDER, active_app->name);
-		app_radio_render(screen);
-		active_app->app_render(screen);
+		struct Ui_Window window = {
+			.x = UI_WINDOW_BORDER,
+			.y = window_y_pos,
+			.w = SCREEN_LOGICAL_WIDTH-2*UI_WINDOW_BORDER,
+			.h = SCREEN_LOGICAL_HEIGHT-window_y_pos-UI_WINDOW_BORDER
+		};
+
+		ui_window_render(screen, &window);
+
+		if (!window.should_close) {
+			active_app->app_render(screen);
+		}
+		else {
+			log_debug("Closing app %s\n", active_app->name);
+			active_app->app_close(screen);
+			g_active_app_idx = -1;
+		}
 	}
 }

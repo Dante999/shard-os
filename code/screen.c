@@ -355,7 +355,6 @@ void screen_draw_window(struct Screen *screen, int x, int y, int width, int heig
 	screen_set_color(screen, SCREEN_COLOR_FONT);
 	SDL_RenderDrawLines(screen->renderer, points, ARRAY_SIZE(points));
 	screen_draw_text(screen, x_left+CORNER_CUT+10, y_top+CORNER_CUT+10, g_config.screen_font_size_l, name);
-	screen_draw_text(screen, x_right-CORNER_CUT-(close_button_width/2), y_top+10, g_config.screen_font_size_l, "x");
 }
 
 static void screen_handle_keypress(struct Screen *screen, SDL_Keysym *key)
