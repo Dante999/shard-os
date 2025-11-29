@@ -3,8 +3,12 @@
 
 #include "screen.h"
 
-void ui_main_init(struct Screen *screen);
-void ui_main_draw_header(struct Screen *screen);
+enum App_Status {
+	APP_STATUS_RUNNING,
+	APP_STATUS_CLOSED
+};
 
+void ui_main_init(struct Screen *screen);
+void ui_main_render(struct Screen *screen);
 
 #endif // UI_MAIN_H

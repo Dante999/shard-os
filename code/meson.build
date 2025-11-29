@@ -8,7 +8,7 @@ shard_os_sources = [
   'screen.c',
   'ui_main.c',
   'ui_elements.c',
-  'ui_radio.c'
+  'app_radio.c'
 ]
 
 executable('shard-os',

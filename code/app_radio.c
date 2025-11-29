@@ -1,4 +1,4 @@
-#include "ui_radio.h"
+#include "app_radio.h"
 
 #include "ui_elements.h"
 #include "config.h"
@@ -37,7 +37,7 @@ static void radiostation_add(struct Radio_Station_List *list, const char *name, 
 	strncpy(list->items[i].url , url , sizeof(list->items[i].url));
 }
 
-void ui_radio_init(struct Screen *screen, const char *filepath)
+void app_radio_init(struct Screen *screen, const char *filepath)
 {
 	(void) filepath;
 	char fullpath[255];
@@ -73,9 +73,20 @@ void ui_radio_init(struct Screen *screen, const char *filepath)
 
 }
 
-void ui_radio_render(struct Screen *screen)
+enum App_Status app_radio_render(struct Screen *screen)
 {
 	ui_clickable_list_render(screen, &g_clickable_list);
 	ui_media_player_render(screen, &g_player);
+
+	return APP_STATUS_RUNNING;
 }
 
+void app_radio_close(struct Screen *screen)
+{
+	(void) screen;
+}
+
+void app_radio_open(struct Screen *screen)
+{
+	(void) screen;
+}

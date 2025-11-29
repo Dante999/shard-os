@@ -46,8 +46,7 @@ int main(int argc, char *argv[])
 
 	while (!screen.quit) {
 		screen_rendering_start(&screen);
-
-		ui_main_draw_header(&screen);
+		ui_main_render(&screen);
 
 		screen_rendering_stop(&screen);
 

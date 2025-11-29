@@ -25,9 +25,18 @@ struct Ui_Button {
 	int font_size;
 	enum Ui_Border border;
 	bool is_selectable;
-	void *user_data;
+	void *user_data; // TODO: remove? unused?
 };
 
+struct Ui_Box {
+	char id[40];
+	int x;
+	int y;
+	int w;
+	int h;
+	void (*on_click)(struct Ui_Box *box);
+	bool is_selectable;
+};
 
 # define UI_LIST_MAX_ITEMS  40
 
@@ -87,6 +96,7 @@ void ui_button_init_icon(
 	void (*on_click)(struct Ui_Button *btn));
 
 void ui_button_render(struct Screen *screen, struct Ui_Button *btn);
+void ui_box_render(struct Screen *screen, struct Ui_Box *box);
 
 void ui_media_player_init(
 	struct Screen *screen,

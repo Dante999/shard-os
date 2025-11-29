@@ -112,6 +112,22 @@ void ui_button_init(
 	btn->is_selectable = true;
 }
 
+void ui_box_render(struct Screen *screen, struct Ui_Box *box)
+{
+	bool is_selected = false;
+
+	if (box->is_selectable && IN_RANGE(screen->mouse_x, box->x, box->x+box->w) &&
+		IN_RANGE(screen->mouse_y, box->y, box->y+box->h)) {
+		is_selected = true;
+	}
+
+	screen_draw_box(screen, box->x, box->y, box->w, box->h, is_selected);
+	
+	if (is_selected && screen->mouse_clicked && box->on_click != NULL) {
+		box->on_click(box);
+	}
+}
+
 void ui_button_render(struct Screen *screen, struct Ui_Button *btn)
 {
 	bool is_selected = false;
@@ -129,8 +145,8 @@ void ui_button_render(struct Screen *screen, struct Ui_Button *btn)
 	else if (btn->type == BUTTON_TYPE_ICON) {
 		char path[512];
 		snprintf(path, sizeof(path), "%s/icons/%s", g_config.resources_dir, btn->text);
-		screen_draw_icon(screen, 
-			btn->x+UI_BUTTON_BORDER_WIDTH, btn->y+UI_BUTTON_BORDER_WIDTH, 
+		screen_draw_icon(screen,
+			btn->x+UI_BUTTON_BORDER_WIDTH, btn->y+UI_BUTTON_BORDER_WIDTH,
 			btn->font_size, btn->font_size, path);
 	}
 
@@ -155,14 +171,17 @@ void ui_clickable_list_init(struct Screen *screen, struct Ui_Clickable_List *lis
 	const int page_button_width = 70;
 	const int page_index_width  = 50;
 	const int nav_page_width    = page_button_width*2 + page_index_width + 2*page_clearance;
-	ui_button_init_icon(screen, &list->internal.button_prev_page , 
-		"btn_prev" , 
-		x_center-nav_page_width/2, y_pagination, 
+
+#if 0
+	ui_button_init_icon(screen, &list->internal.button_prev_page ,
+		"btn_prev" ,
+		x_center-nav_page_width/2, y_pagination,
 		UI_BUTTON_FONT_SIZE*2,
 		"arrow-left-64x64.png", on_clickable_list_button_pressed);
+#else
+ui_button_init(screen, &list->internal.button_prev_page , "btn_prev" , x_center-nav_page_width/2, y_pagination, "prev", on_clickable_list_button_pressed);
+#endif
 
-
-	//ui_button_init(screen, &list->internal.button_prev_page , "btn_prev" , x_center-nav_page_width/2, y_pagination, "prev", on_clickable_list_button_pressed);
 	ui_button_init(screen, &list->internal.button_page_index, "btn_index", x_center-page_index_width/2, y_pagination, "0", on_clickable_list_button_pressed);
 	ui_button_init(screen, &list->internal.button_next_page , "btn_next" , x_center+nav_page_width/2-page_button_width, y_pagination, "next", on_clickable_list_button_pressed);
 
@@ -297,7 +316,7 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 
 	char buffer[20];
 
-#if 0 
+#if 0
 	char fmt[50];
 
 	if (track_len.h == 0) strcpy(fmt, "%02d:%02d");
@@ -316,7 +335,7 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 #endif
 
 	screen_draw_text(
-		screen, 
+		screen,
 		player->internal.progress_bar.x,
 		player->internal.progress_bar.y,
 		g_config.screen_font_size_xs,
@@ -324,7 +343,7 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 
 	snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", track_len.h, track_len.m, track_len.s);
 	screen_draw_text(
-		screen, 
+		screen,
 		player->internal.progress_bar.x+player->internal.progress_bar.w-80,
 		player->internal.progress_bar.y,
 		g_config.screen_font_size_xs,
