@@ -123,10 +123,11 @@ void ui_main_render(struct Screen *screen)
 
 		const int window_y_pos = SCREEN_BORDER_WIDTH+UI_STATUS_BAR_HEIGHT+UI_WINDOW_BORDER;
 		struct Ui_Window window = {
-			.x = UI_WINDOW_BORDER,
-			.y = window_y_pos,
-			.w = SCREEN_LOGICAL_WIDTH-2*UI_WINDOW_BORDER,
-			.h = SCREEN_LOGICAL_HEIGHT-window_y_pos-UI_WINDOW_BORDER
+			.name = active_app->name,
+			.x    = UI_WINDOW_BORDER,
+			.y    = window_y_pos,
+			.w    = SCREEN_LOGICAL_WIDTH-2*UI_WINDOW_BORDER,
+			.h    = SCREEN_LOGICAL_HEIGHT-window_y_pos-UI_WINDOW_BORDER
 		};
 
 		ui_window_render(screen, &window);
