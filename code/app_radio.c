@@ -60,8 +60,8 @@ void app_radio_init(struct Screen *screen, const char *filepath)
 
 	ui_clickable_list_clear(&g_clickable_list);
 
-	const int y_start = 180;
-	const int height  = 370;
+	const int y_start = 200;
+	const int height  = 350;
 
 	ui_clickable_list_init(screen, &g_clickable_list, 520, y_start, 460, height);
 	for (size_t i=0; i < g_radio_stations.count; ++i) {
