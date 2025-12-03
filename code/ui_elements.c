@@ -8,9 +8,10 @@
 
 #define UI_BUTTON_BORDER_WIDTH 7
 #define UI_BUTTON_FONT_SIZE    g_config.screen_font_size_s
-
+#define UI_BUTTON_HEIGHT       (UI_BUTTON_FONT_SIZE+2*UI_BUTTON_BORDER_WIDTH)
 #define UI_CLICKABLE_LIST_ENTRY_FACTOR (UI_BUTTON_FONT_SIZE+2*UI_BUTTON_BORDER_WIDTH+10)
 #define UI_MEDIA_PLAYER_CLEARANCE 10
+#define UI_CLICKABLE_LIST_PAGINATION_CLEARANCE 10
 
 struct Audio_Len {
 	int h;
@@ -180,35 +181,41 @@ void ui_button_render(struct Screen *screen, struct Ui_Button *btn)
 	}
 }
 
-void ui_clickable_list_init(struct Screen *screen, struct Ui_Clickable_List *list, int x, int y, int w, size_t items_per_page)
+void ui_clickable_list_init(struct Screen *screen,
+	struct Ui_Clickable_List *list,
+	int x, int y, int w, int h)
 {
-	list->x              = x;
-	list->y              = y;
-	list->w              = w;
-	list->items_per_page = items_per_page;
+	list->attr.x = x;
+	list->attr.y = y;
+	list->attr.w = w;
+	list->attr.h = h;
+	list->attr.border = UI_BORDER_NONE;
 	list->internal.count = 0;
 
+	const int x_center     = list->attr.x + (list->attr.w/2);
+	const int y_pagination = (list->attr.y+list->attr.h)-(UI_BUTTON_HEIGHT+UI_CLICKABLE_LIST_PAGINATION_CLEARANCE);
 
-	const int x_center     = list->x + (list->w/2);
-	const int y_pagination = list->y + (int)(list->items_per_page)*UI_CLICKABLE_LIST_ENTRY_FACTOR;
+	list->items_per_page = (y_pagination-list->attr.y) / UI_CLICKABLE_LIST_ENTRY_FACTOR;
 
-	const int page_clearance    = 30;
+	const int page_clearance    = UI_CLICKABLE_LIST_PAGINATION_CLEARANCE;
 	const int page_button_width = 70;
 	const int page_index_width  = 50;
 	const int nav_page_width    = page_button_width*2 + page_index_width + 2*page_clearance;
 
-#if 0
-	ui_button_init_icon(screen, &list->internal.button_prev_page ,
-		"btn_prev" ,
-		x_center-nav_page_width/2, y_pagination,
-		UI_BUTTON_FONT_SIZE*2,
-		"arrow-left-64x64.png", on_clickable_list_button_pressed);
-#else
-ui_button_init(screen, &list->internal.button_prev_page , "btn_prev" , x_center-nav_page_width/2, y_pagination, "prev", on_clickable_list_button_pressed);
-#endif
+	ui_button_init(
+		screen, &list->internal.button_prev_page , "btn_prev" ,
+		x_center-nav_page_width/2, y_pagination, "prev", 
+		on_clickable_list_button_pressed);
 
-	ui_button_init(screen, &list->internal.button_page_index, "btn_index", x_center-page_index_width/2, y_pagination, "0", on_clickable_list_button_pressed);
-	ui_button_init(screen, &list->internal.button_next_page , "btn_next" , x_center+nav_page_width/2-page_button_width, y_pagination, "next", on_clickable_list_button_pressed);
+	ui_button_init(
+		screen, &list->internal.button_page_index, "btn_index",
+		x_center-page_index_width/2, y_pagination, "0",
+		on_clickable_list_button_pressed);
+
+	ui_button_init(
+		screen, &list->internal.button_next_page , "btn_next" ,
+		x_center+nav_page_width/2-page_button_width, y_pagination, "next",
+		on_clickable_list_button_pressed);
 
 	list->internal.button_prev_page.w  = page_button_width;
 	list->internal.button_page_index.w = page_index_width;
@@ -230,11 +237,11 @@ void ui_clickable_list_append(struct Screen *screen, struct Ui_Clickable_List *l
 	char buffer[40];
 	snprintf(buffer, sizeof(buffer), "%zu", list->internal.count);
 	ui_button_init(screen, btn, buffer,
-		list->x, list->y + (int)((list->internal.count) * UI_CLICKABLE_LIST_ENTRY_FACTOR),
+		list->attr.x, list->attr.y + (int)((list->internal.count) * UI_CLICKABLE_LIST_ENTRY_FACTOR),
 		text, on_clickable_list_button_pressed);
 
 	btn->user_data = list;
-	btn->w = list->w;
+	btn->w = list->attr.w;
 
 	++list->internal.count;
 	log_debug("list size: %zu\n", list->internal.count);
@@ -242,6 +249,10 @@ void ui_clickable_list_append(struct Screen *screen, struct Ui_Clickable_List *l
 
 void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *list)
 {
+	if (list->attr.border == UI_BORDER_NORMAL) {
+		screen_draw_box(screen, list->attr.x, list->attr.y, list->attr.w, list->attr.h, false);
+	}
+
 	size_t start = list->page_index * list->items_per_page;
 	size_t end   = MIN(start+list->items_per_page, list->internal.count);
 	if (start >= end) start=0;

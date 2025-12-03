@@ -36,7 +36,7 @@ struct App g_apps[] = {
 
 void ui_main_init(struct Screen *screen)
 {
-	app_radio_init(screen, "radiostations.txt");
+	app_radio_init(screen, "data/radiostations.conf");
 }
 
 

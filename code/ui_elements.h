@@ -13,6 +13,14 @@ enum Button_Type {
 	BUTTON_TYPE_ICON
 };
 
+struct Ui_Attributes {
+	int x;
+	int y;
+	int w;
+	int h;
+	enum Ui_Border border;
+};
+
 struct Ui_Button {
 	char id[40];
 	int x;
@@ -50,10 +58,7 @@ struct Ui_Window {
 #define UI_LIST_MAX_ITEMS  40
 
 struct Ui_Clickable_List {
-	int x;
-	int y;
-	int w;
-	int h;
+	struct Ui_Attributes attr;
 	size_t items_per_page;
 	size_t page_index;
 	void (*on_click)(int index);
@@ -114,7 +119,11 @@ void ui_media_player_init(
 	int x, int y, int w, int h);
 void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *player);
 
-void ui_clickable_list_init(struct Screen *screen, struct Ui_Clickable_List *list, int x, int y, int w, size_t items_per_page);
+void ui_clickable_list_init(
+	struct Screen *screen,
+	struct Ui_Clickable_List *list,
+	int x, int y, int w, int h);
+
 void ui_clickable_list_clear(struct Ui_Clickable_List *list);
 void ui_clickable_list_append(struct Screen *screen, struct Ui_Clickable_List *list, const char *text);
 void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *list);

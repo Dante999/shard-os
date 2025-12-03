@@ -60,14 +60,17 @@ void app_radio_init(struct Screen *screen, const char *filepath)
 
 	ui_clickable_list_clear(&g_clickable_list);
 
-	ui_clickable_list_init(screen, &g_clickable_list, 520, 220, 460, 7);
+	const int y_start = 180;
+	const int height  = 370;
+
+	ui_clickable_list_init(screen, &g_clickable_list, 520, y_start, 460, height);
 	for (size_t i=0; i < g_radio_stations.count; ++i) {
 		ui_clickable_list_append(screen, &g_clickable_list, g_radio_stations.items[i].name);
 	}
 
 	g_clickable_list.on_click = on_radio_station_clicked;
 
-	ui_media_player_init(screen, &g_player, 50, 220, 450, 300);
+	ui_media_player_init(screen, &g_player, 50, y_start, 450, height);
 	snprintf(g_player.first_line , sizeof(g_player.first_line) , "Arch Enemy");
 	snprintf(g_player.second_line, sizeof(g_player.second_line), "The Eagle Flies Alone");
 
