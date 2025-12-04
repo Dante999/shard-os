@@ -485,7 +485,15 @@ void screen_rendering_start(struct Screen *screen)
 		case SDL_MOUSEBUTTONDOWN:
 			screen->mouse_clicked = true; // we don't care which mouse
 					      // button
-
+		case SDL_FINGERDOWN:
+			printf("Finger down  id=%ld  x=%.3f  y=%.3f  pressure=%.3f\n",
+					e.tfinger.fingerId,
+					e.tfinger.x, e.tfinger.y,
+					e.tfinger.pressure);
+			screen->mouse_clicked = true;
+			screen->mouse_x = e.tfinger.x;
+			screen->mouse_y = e.tfinger.y;
+			break;
 		}
 	}
 
