@@ -309,17 +309,19 @@ void screen_draw_text_boxed(struct Screen *screen, int x, int y, int font_size, 
 void screen_draw_window(struct Screen *screen, int x, int y, int width, int height, const char *name)
 {
 	static const int close_button_width = 50;
-	//                           *--\
-	//   *----------------------/    x
-	//  /                            x
-	// *                             x
-	// |                             x
-	// |                             x
-	// |                             x
-	// |                             x
-	// |                             x
-	//  x                           x
-	//   xxxxxxxxxxxxxxxxxxxxxxxxxxx
+	/*
+	 *                           *--\
+	 *   *----------------------/    x
+	 *  /                            x
+	 * *                             x
+	 * |                             x
+	 * |                             x
+	 * |                             x
+	 * |                             x
+	 * |                             x
+	 *  x                           x
+	 *   xxxxxxxxxxxxxxxxxxxxxxxxxxx
+	 */
 
 	const int x_left   = x;
 	const int x_right  = x+width;
@@ -479,13 +481,23 @@ void screen_rendering_start(struct Screen *screen)
 		case SDL_QUIT:
 			screen->quit = true;
 			break;
+
 		case SDL_KEYDOWN:
 			screen_handle_keypress(screen, &event.key.keysym);
 			break;
-		case SDL_MOUSEBUTTONDOWN:
-			screen->mouse_clicked = true; // we don't care which mouse
-					      // button
 
+		case SDL_MOUSEBUTTONDOWN:
+			// we dont' care which mouse button was clicked
+			screen->mouse_clicked = true;
+			break;
+
+		case SDL_FINGERDOWN:
+			screen->mouse_clicked = true;
+			int w,h;
+			SDL_GetRendererOutputSize(screen->renderer, &w, &h);
+			screen->mouse_x = (int)((float)w*event.tfinger.x);
+			screen->mouse_y = (int)((float)h*event.tfinger.y);
+			break;
 		}
 	}
 
