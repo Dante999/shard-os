@@ -55,16 +55,16 @@ struct Ui_Window {
 	bool should_close;
 };
 
-#define UI_LIST_MAX_ITEMS  40
-
+#define UI_LIST_MAX_ITEMS    40
+#define UI_LIST_MAX_ITEM_LEN 40
 struct Ui_Clickable_List {
 	struct Ui_Attributes attr;
-	size_t items_per_page;
-	size_t page_index;
 	void (*on_click)(int index);
 	struct {
-		struct Ui_Button items[UI_LIST_MAX_ITEMS];
+		char items[UI_LIST_MAX_ITEMS][UI_LIST_MAX_ITEM_LEN];
 		size_t count;
+		size_t page_index;
+		size_t items_per_page;
 		struct Ui_Button button_prev_page;
 		struct Ui_Button button_page_index;
 		struct Ui_Button button_next_page;

@@ -40,17 +40,21 @@ static void on_clickable_list_button_pressed(struct Ui_Button *btn)
 	}
 
 	log_debug("on_list_item_clicked (count=%zu)\n", list->internal.count);
-	if (strcmp("btn_prev", btn->id) == 0 && list->page_index > 0) {
-		--list->page_index;
+	if (strcmp("btn_prev", btn->id) == 0 ) {
+		if (list->internal.page_index > 0) {
+			--list->internal.page_index;
+		}
 		return;
 	}
 
 	if (strcmp("btn_next", btn->id) == 0) {
-		log_debug("TODO: btn_next pressed\n");
+		if (list->internal.page_index < list->internal.count/list->internal.items_per_page) {
+			++list->internal.page_index;
+		}
 		return;
 	}
 
-	if (strcmp("btn_index", btn->id) == 0 && list->page_index > 0) return;
+	if (strcmp("btn_index", btn->id) == 0 && list->internal.page_index > 0) return;
 
 	char *end;
 	long val = strtol(btn->id, &end, 10); // base 10
@@ -123,7 +127,7 @@ void ui_box_render(struct Screen *screen, struct Ui_Box *box)
 	}
 
 	screen_draw_box(screen, box->x, box->y, box->w, box->h, is_selected);
-	
+
 	if (is_selected && screen->mouse_clicked && box->on_click != NULL) {
 		box->on_click(box);
 	}
@@ -195,17 +199,25 @@ void ui_clickable_list_init(struct Screen *screen,
 	const int x_center     = list->attr.x + (list->attr.w/2);
 	const int y_pagination = (list->attr.y+list->attr.h)-(UI_BUTTON_HEIGHT+UI_CLICKABLE_LIST_PAGINATION_CLEARANCE);
 
-	list->items_per_page = (y_pagination-list->attr.y) / UI_CLICKABLE_LIST_ENTRY_FACTOR;
+	list->internal.items_per_page = (y_pagination-list->attr.y) / UI_CLICKABLE_LIST_ENTRY_FACTOR;
 
 	const int page_clearance    = UI_CLICKABLE_LIST_PAGINATION_CLEARANCE;
 	const int page_button_width = 70;
 	const int page_index_width  = 50;
 	const int nav_page_width    = page_button_width*2 + page_index_width + 2*page_clearance;
-
+#if 1
 	ui_button_init(
 		screen, &list->internal.button_prev_page , "btn_prev" ,
-		x_center-nav_page_width/2, y_pagination, "prev", 
+		x_center-nav_page_width/2, y_pagination, "prev",
 		on_clickable_list_button_pressed);
+	list->internal.button_prev_page.user_data = list;
+#else
+	ui_button_init_icon(
+		screen, &list->internal.button_prev_page, "btn_prev",
+		x_center-nav_page_width/2, y_pagination, page_button_width,
+		"arrow-left-64x64.png",
+		on_clickable_list_button_pressed);
+#endif
 
 	ui_button_init(
 		screen, &list->internal.button_page_index, "btn_index",
@@ -216,6 +228,7 @@ void ui_clickable_list_init(struct Screen *screen,
 		screen, &list->internal.button_next_page , "btn_next" ,
 		x_center+nav_page_width/2-page_button_width, y_pagination, "next",
 		on_clickable_list_button_pressed);
+	list->internal.button_next_page.user_data = list;
 
 	list->internal.button_prev_page.w  = page_button_width;
 	list->internal.button_page_index.w = page_index_width;
@@ -232,6 +245,7 @@ void ui_clickable_list_append(struct Screen *screen, struct Ui_Clickable_List *l
 {
 	if (list->internal.count >= UI_LIST_MAX_ITEMS) return;
 
+#if 0
 	struct Ui_Button *btn = &list->internal.items[list->internal.count];
 
 	char buffer[40];
@@ -244,6 +258,13 @@ void ui_clickable_list_append(struct Screen *screen, struct Ui_Clickable_List *l
 	btn->w = list->attr.w;
 
 	++list->internal.count;
+#else
+	strncpy(
+		list->internal.items[list->internal.count++],
+		text, 
+		UI_LIST_MAX_ITEM_LEN),
+
+#endif
 	log_debug("list size: %zu\n", list->internal.count);
 }
 
@@ -253,21 +274,32 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 		screen_draw_box(screen, list->attr.x, list->attr.y, list->attr.w, list->attr.h, false);
 	}
 
-	size_t start = list->page_index * list->items_per_page;
-	size_t end   = MIN(start+list->items_per_page, list->internal.count);
+	size_t start = list->internal.page_index * list->internal.items_per_page;
+	size_t end   = MIN(start+list->internal.items_per_page, list->internal.count);
 	if (start >= end) start=0;
 
 	// TODO: render relative positions depending on page_index instead of
 	// static ones assigned during ui_clickable_list_append
+		struct Ui_Button btn;
 	for (size_t i=start; i < end; ++i) {
-		ui_button_render(screen, &list->internal.items[i]);
+		char btn_id[25];
+		snprintf(btn_id, sizeof(btn_id), "%zu", i);
+		ui_button_init(screen, &btn, btn_id,
+			list->attr.x,
+			list->attr.y + (int)((i-start) * UI_CLICKABLE_LIST_ENTRY_FACTOR),
+			list->internal.items[i], 
+			on_clickable_list_button_pressed);
+
+		btn.user_data = list;
+		btn.w = list->attr.w;
+		ui_button_render(screen, &btn);
 	}
 
 	struct Ui_Button *btn_prev  = &list->internal.button_prev_page;
 	struct Ui_Button *btn_index = &list->internal.button_page_index;
 	struct Ui_Button *btn_next  = &list->internal.button_next_page;
 
-	snprintf(btn_index->text, sizeof(btn_index->text), "%zu", list->page_index+1);
+	snprintf(btn_index->text, sizeof(btn_index->text), "%zu", list->internal.page_index+1);
 
 	ui_button_render(screen, btn_prev);
 	ui_button_render(screen, btn_index);
