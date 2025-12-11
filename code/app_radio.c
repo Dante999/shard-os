@@ -17,9 +17,9 @@ struct Radio_Station_List {
 	size_t count;
 };
 
-struct Ui_Clickable_List  g_clickable_list = {0};
-struct Radio_Station_List g_radio_stations = {0};
-struct Ui_Media_Player    g_player         = {0};
+static struct Ui_Clickable_List  g_clickable_list = {0};
+static struct Radio_Station_List g_radio_stations = {0};
+static struct Ui_Media_Player    g_player         = {0};
 
 static void on_radio_station_clicked(int index)
 {

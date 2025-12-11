@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "app_radio.h"
+#include "app_jukebox.h"
 #include "ui_elements.h"
 
 #include "libcutils/logger.h"
@@ -23,20 +24,14 @@ struct App {
 
 int g_active_app_idx = -1;
 struct App g_apps[] = {
-	{"Radio", app_radio_open, app_radio_render, app_radio_close},
-	{"Radio", app_radio_open, app_radio_render, app_radio_close},
-	{"Radio", app_radio_open, app_radio_render, app_radio_close},
-	{"Radio", app_radio_open, app_radio_render, app_radio_close},
-	{"Radio", app_radio_open, app_radio_render, app_radio_close},
-	{"Radio", app_radio_open, app_radio_render, app_radio_close},
-	{"Radio", app_radio_open, app_radio_render, app_radio_close},
-	{"Radio", app_radio_open, app_radio_render, app_radio_close},
-	{"Radio", app_radio_open, app_radio_render, app_radio_close},
+	{"Radio"  , app_radio_open, app_radio_render, app_radio_close},
+	{"Jukebox", app_jukebox_open, app_jukebox_render, app_jukebox_close},
 };
 
 void ui_main_init(struct Screen *screen)
 {
-	app_radio_init(screen, "data/radiostations.conf");
+	app_radio_init(screen  , "data/radiostations.conf");
+	app_jukebox_init(screen, "data/jukebox");
 }
 
 

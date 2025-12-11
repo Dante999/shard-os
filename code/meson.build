@@ -3,11 +3,13 @@ sdl_ttf_dependency = dependency('SDL2_ttf'  , include_type: 'system')
 sdl_gfx            = dependency('SDL2_gfx'  , include_type: 'system')
 sdl_image          = dependency('SDL2_image', include_type: 'system')
 shard_os_sources = [
-  'main.c',
   'config.c',
+  'main.c',
   'screen.c',
-  'ui_main.c',
+  'filebrowser.c',
   'ui_elements.c',
+  'ui_main.c',
+  'app_jukebox.c',
   'app_radio.c'
 ]
 
