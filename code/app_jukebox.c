@@ -32,7 +32,7 @@ static void on_filebrowser_clicked(int index)
 	struct Node *node = &g_filebrowser.nodes[index];
 	log_debug("Filebrowser[%d] clicked: %s!\n", index, node->name);
 
-	if (node->type == NODE_TYPE_DIR) {
+	if (node->type == NODE_TYPE_DIR || strcmp(node->name, "..") == 0) {
 		log_debug("Entering subdir!\n");
 		filebrowser_enter(&g_filebrowser, node->name);
 		refresh_clickable_list(g_screen);
@@ -66,7 +66,10 @@ void app_jukebox_open(struct Screen *screen)
 
 enum App_Status app_jukebox_render(struct Screen *screen)
 {
-	//refresh_clickable_list(screen); // TODO: do only on changes
+	screen_draw_text(screen, 
+		g_player.x, g_player.y-30,
+		g_config.screen_font_size_xs, g_filebrowser.sub_path);
+
 	ui_clickable_list_render(screen, &g_clickable_list);
 	ui_media_player_render(screen, &g_player);
 

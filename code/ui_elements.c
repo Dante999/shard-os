@@ -261,11 +261,10 @@ void ui_clickable_list_append(struct Screen *screen, struct Ui_Clickable_List *l
 #else
 	strncpy(
 		list->internal.items[list->internal.count++],
-		text, 
-		UI_LIST_MAX_ITEM_LEN),
+		text,
+		UI_LIST_MAX_ITEM_LEN);
 
 #endif
-	log_debug("list size: %zu\n", list->internal.count);
 }
 
 void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *list)

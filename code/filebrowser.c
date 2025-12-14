@@ -5,9 +5,9 @@
 
 #include <dirent.h>
 #include <stdio.h>
+#include <string.h>
 
-
-static void filebrowser_append(struct Filebrowser *fb, const char *name, enum Node_Type type)
+static void filebrowser_append_node(struct Filebrowser *fb, const char *name, enum Node_Type type)
 {
 	if (fb->node_count < ARRAY_SIZE(fb->nodes)) {
 		struct Node *ptr = &fb->nodes[fb->node_count++];
@@ -40,11 +40,11 @@ static void filebrowser_load(struct Filebrowser *fb)
 		if (strcmp(ent->d_name, ".") == 0) continue;
 
 		if (ent->d_type == DT_DIR) {
-			filebrowser_append(fb, ent->d_name, NODE_TYPE_DIR);
+			filebrowser_append_node(fb, ent->d_name, NODE_TYPE_DIR);
 			printf("\tdir : %s\n", ent->d_name);
 		}
 		else if (ent->d_type == DT_REG) {
-			filebrowser_append(fb, ent->d_name, NODE_TYPE_FILE);
+			filebrowser_append_node(fb, ent->d_name, NODE_TYPE_FILE);
 			printf("\tfile: %s\n", ent->d_name);
 #if 0
 			char symlink[1024];
@@ -67,11 +67,17 @@ static void filebrowser_load(struct Filebrowser *fb)
 void filebrowser_enter(struct Filebrowser *fb, const char *dir_name)
 {
 	if (strcmp(dir_name, "..") == 0) {
-		// TODO: go folder back
-		return;
-	}
+		log_info("going one folder up...\n");
+		char *pos = strrchr(fb->sub_path, '/');
 
-	if (strlen(fb->sub_path) + strlen(dir_name) < sizeof(fb->sub_path)+2) {
+		if (pos != NULL) {
+			*pos = '\0';
+		}
+		else {
+			fb->sub_path[0] = '\0';
+		}
+	}
+	else if (strlen(fb->sub_path) + strlen(dir_name) < sizeof(fb->sub_path)+2) {
 		strcat(fb->sub_path, "/");
 		strcat(fb->sub_path, dir_name);
 	}
