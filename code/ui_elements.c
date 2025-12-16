@@ -48,7 +48,7 @@ static void on_clickable_list_button_pressed(struct Ui_Button *btn)
 	}
 
 	if (strcmp("btn_next", btn->id) == 0) {
-		if (list->internal.page_index < list->internal.count/list->internal.items_per_page) {
+		if (list->internal.page_index < list->internal.count/list->internal.items_per_page-1) {
 			++list->internal.page_index;
 		}
 		return;

@@ -6,7 +6,7 @@
 
 #include "libcutils/logger.h"
 
-#define MAX_BROWSER_ENTRY_LEN 30
+#define MAX_BROWSER_ENTRY_LEN 40
 
 static char g_basepath[1024];
 static struct Ui_Clickable_List  g_clickable_list = {0};

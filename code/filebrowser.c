@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 static void filebrowser_append_node(struct Filebrowser *fb, const char *name, enum Node_Type type)
 {
@@ -15,6 +16,13 @@ static void filebrowser_append_node(struct Filebrowser *fb, const char *name, en
 		strncpy(ptr->name, name, sizeof(ptr->name));
 		ptr->type = type;
 	}
+}
+
+static int filebrowser_sort_nodes(const void *lhs, const void *rhs)
+{
+	struct Node *n_lhs = (struct Node *) lhs;
+	struct Node *n_rhs = (struct Node *) rhs;
+	return strncmp(n_lhs->name, n_rhs->name, sizeof(n_lhs->name));
 }
 
 static void filebrowser_load(struct Filebrowser *fb)
@@ -46,23 +54,12 @@ static void filebrowser_load(struct Filebrowser *fb)
 		else if (ent->d_type == DT_REG) {
 			filebrowser_append_node(fb, ent->d_name, NODE_TYPE_FILE);
 			printf("\tfile: %s\n", ent->d_name);
-#if 0
-			char symlink[1024];
-			char symlink_target[1024];
-
-			snprintf(symlink, sizeof(symlink), "/proc/asound/%s", ent->d_name);
-			ssize_t ret = readlink(symlink, symlink_target, sizeof(symlink_target));
-			int errval = errno;
-			if (ret == -1) {
-				fprintf(stderr, "ERROR: unable to read symlink %s: %s\n",
-						symlink, strerror(errval));
-			}
-			printf("\t* %s -> %s\n", ent->d_name, symlink_target);
-#endif
 		}
 	}
 
 	closedir(cur_dir);
+
+	qsort(fb->nodes, fb->node_count, sizeof(fb->nodes[0]), filebrowser_sort_nodes);
 }
 void filebrowser_enter(struct Filebrowser *fb, const char *dir_name)
 {
