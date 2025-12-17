@@ -20,7 +20,7 @@ struct Config {
 	char resources_dir[255];
 	char font_file[255];
 
-	struct Color screen_color_font;
+	struct Color screen_color_primary;
 	struct Color screen_color_highlight;
 	struct Color screen_color_background;
 };

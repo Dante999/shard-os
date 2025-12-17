@@ -35,7 +35,7 @@ Result config_load_colorscheme(const char *filepath)
 	Result r = config_file_init(&cfg, filepath);
 	if (!r.success) return r;
 
-	r = config_parse_color(&cfg, &g_config.screen_color_font, "screen_color_primary");
+	r = config_parse_color(&cfg, &g_config.screen_color_primary, "screen_color_primary");
 	if (!r.success) return r;
 
 	r = config_parse_color(&cfg, &g_config.screen_color_highlight, "screen_color_highlight");

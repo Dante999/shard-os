@@ -26,23 +26,40 @@
 
 #define TEXT_BORDER 10
 #define CORNER_CUT  20
-void screen_set_color(struct Screen *screen, enum Screen_Color color)
+
+
+static SDL_Color screen_get_color(enum Screen_Color color)
 {
 	struct Color *ptr = NULL;
 
 	switch(color) {
-	case SCREEN_COLOR_FONT:
-		ptr = &g_config.screen_color_font;
+	case SCREEN_COLOR_PRIMARY:
+		ptr = &g_config.screen_color_primary;
 		break;
 	case SCREEN_COLOR_HIGHLIGHT:
 		ptr = &g_config.screen_color_highlight;
 		break;
+	case SCREEN_COLOR_BACKGROUND:
+		ptr = &g_config.screen_color_background;
+		break;
 
 	}
+
+	SDL_Color sdl_color = {0};
 
 	if (ptr != NULL) {
-		SDL_SetRenderDrawColor(screen->renderer, (uint8_t)ptr->r, (uint8_t)ptr->g, (uint8_t)ptr->b, (uint8_t)ptr->a);
+		sdl_color.r = (uint8_t) ptr->r;
+		sdl_color.g = (uint8_t) ptr->g;
+		sdl_color.b = (uint8_t) ptr->b;
+		sdl_color.a = (uint8_t) ptr->a;
 	}
+	return sdl_color;
+}
+
+void screen_set_color(struct Screen *screen, enum Screen_Color color)
+{
+	SDL_Color sdl_color = screen_get_color(color);
+	SDL_SetRenderDrawColor(screen->renderer, sdl_color.r, sdl_color.g, sdl_color.b, sdl_color.a);
 }
 
 static void check_sdl(int sdl_error)
@@ -117,15 +134,10 @@ void screen_draw_icon(struct Screen *screen, int x, int y, int width, int height
 			screen->renderer,
 			tmp_surface);
 	
-	SDL_Color font_color = {
-		.r = (uint8_t) g_config.screen_color_font.r,
-		.g = (uint8_t) g_config.screen_color_font.g,
-		.b = (uint8_t) g_config.screen_color_font.b,
-		.a = (uint8_t) g_config.screen_color_font.a,
-	};
+	SDL_Color primary_color = screen_get_color(SCREEN_COLOR_PRIMARY);
 	SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-	SDL_SetTextureColorMod(texture, font_color.r, font_color.g, font_color.b);   // tint multiplier for RGB
-	SDL_SetTextureAlphaMod(texture, font_color.a);         // overall alpha
+	SDL_SetTextureColorMod(texture, primary_color.r, primary_color.g, primary_color.b);   // tint multiplier for RGB
+	SDL_SetTextureAlphaMod(texture, primary_color.a);         // overall alpha
 	SDL_Rect text_rect = {
 		.x = x,
 		.y = y,
@@ -159,17 +171,11 @@ void screen_draw_text(struct Screen *screen, int x, int y, int font_size, const 
 
 	TTF_SetFontSize(screen->font, font_size);
 
-	SDL_Color font_color = {
-		.r = (uint8_t) g_config.screen_color_font.r,
-		.g = (uint8_t) g_config.screen_color_font.g,
-		.b = (uint8_t) g_config.screen_color_font.b,
-		.a = (uint8_t) g_config.screen_color_font.a,
-	};
-
+	SDL_Color primary_color = screen_get_color(SCREEN_COLOR_PRIMARY);
 	SDL_Surface *tmp_surface = TTF_RenderText_Blended(
 			screen->font,
 			buffer,
-			font_color
+			primary_color
 			);
 
 	SDL_Texture *texture = SDL_CreateTextureFromSurface(
@@ -190,7 +196,7 @@ void screen_draw_text(struct Screen *screen, int x, int y, int font_size, const 
 
 void screen_draw_line(struct Screen *screen, int x0, int y0, int x1, int y1)
 {
-	screen_set_color(screen, SCREEN_COLOR_FONT);
+	screen_set_color(screen, SCREEN_COLOR_PRIMARY);
 	SDL_RenderDrawLine(screen->renderer, x0, y0, x1, y1);
 }
 
@@ -213,11 +219,13 @@ void screen_draw_box(struct Screen *screen, const int x, const int y, int width,
 			x_vec[i] = (int16_t) points[i].x;
 			y_vec[i] = (int16_t) points[i].y;
 		}
-		struct Color *col = &g_config.screen_color_highlight;
-		filledPolygonRGBA(screen->renderer, x_vec, y_vec, ARRAY_SIZE(points), (uint8_t) col->r, (uint8_t) col->g, (uint8_t) col->b, (uint8_t) col->a);
+
+		SDL_Color col = screen_get_color(SCREEN_COLOR_HIGHLIGHT);
+		filledPolygonRGBA(screen->renderer, x_vec, y_vec, 
+			ARRAY_SIZE(points), col.r, col.g, col.b, col.a);
 	}
 
-	screen_set_color(screen, SCREEN_COLOR_FONT);
+	screen_set_color(screen, SCREEN_COLOR_PRIMARY);
 	SDL_RenderDrawLines(screen->renderer, points, ARRAY_SIZE(points));
 }
 
@@ -240,8 +248,9 @@ void screen_draw_box_filled(struct Screen *screen, int x, int y, int width, int 
 			x_vec[i] = (int16_t) points[i].x;
 			y_vec[i] = (int16_t) points[i].y;
 		}
-		struct Color *col = &g_config.screen_color_font;
-		filledPolygonRGBA(screen->renderer, x_vec, y_vec, ARRAY_SIZE(points), (uint8_t) col->r, (uint8_t) col->g, (uint8_t) col->b, (uint8_t) col->a);
+		SDL_Color col = screen_get_color(color);
+		filledPolygonRGBA(screen->renderer, x_vec, y_vec,
+			ARRAY_SIZE(points), col.r, col.g, col.b, col.a);
 }
 
 void screen_draw_text_boxed(struct Screen *screen, int x, int y, int font_size, int min_width, bool is_selected, const char *fmt, ...)
@@ -265,17 +274,11 @@ void screen_draw_text_boxed(struct Screen *screen, int x, int y, int font_size, 
 
 	TTF_SetFontSize(screen->font, font_size);
 
-	SDL_Color font_color = {
-		.r = (uint8_t) g_config.screen_color_font.r,
-		.g = (uint8_t) g_config.screen_color_font.g,
-		.b = (uint8_t) g_config.screen_color_font.b,
-		.a = (uint8_t) g_config.screen_color_font.a,
-	};
-
+	SDL_Color primary_color = screen_get_color(SCREEN_COLOR_PRIMARY);
 	SDL_Surface *tmp_surface = TTF_RenderText_Blended(
 			screen->font,
 			buffer,
-			font_color
+			primary_color
 			);
 
 	SDL_Texture *texture = SDL_CreateTextureFromSurface(
@@ -350,11 +353,11 @@ void screen_draw_window(struct Screen *screen, int x, int y, int width, int heig
 			x_vec[i] = (int16_t) points[i].x;
 			y_vec[i] = (int16_t) points[i].y;
 		}
-		struct Color *col = &g_config.screen_color_highlight;
-		filledPolygonRGBA(screen->renderer, x_vec, y_vec, ARRAY_SIZE(points), (uint8_t) col->r, (uint8_t) col->g, (uint8_t) col->b, (uint8_t) col->a);
+		SDL_Color col = screen_get_color(SCREEN_COLOR_HIGHLIGHT);
+		filledPolygonRGBA(screen->renderer, x_vec, y_vec, ARRAY_SIZE(points), col.r, col.g, col.b, col.a);
 	}
 
-	screen_set_color(screen, SCREEN_COLOR_FONT);
+	screen_set_color(screen, SCREEN_COLOR_PRIMARY);
 	SDL_RenderDrawLines(screen->renderer, points, ARRAY_SIZE(points));
 	screen_draw_text(screen, x_left+CORNER_CUT+10, y_top+CORNER_CUT+10, g_config.screen_font_size_l, name);
 }

@@ -435,7 +435,7 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 			y-slider_h/2,
 			slider_w,
 			slider_h,
-			true);
+			SCREEN_COLOR_PRIMARY);
 	}
 
 }
