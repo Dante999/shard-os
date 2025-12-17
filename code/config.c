@@ -29,6 +29,24 @@ static Result config_parse_color(struct Config_File *cfg, struct Color *color, c
 	return result_make_success();
 }
 
+Result config_load_colorscheme(const char *filepath)
+{
+	struct Config_File cfg = {0};
+	Result r = config_file_init(&cfg, filepath);
+	if (!r.success) return r;
+
+	r = config_parse_color(&cfg, &g_config.screen_color_font, "screen_color_primary");
+	if (!r.success) return r;
+
+	r = config_parse_color(&cfg, &g_config.screen_color_highlight, "screen_color_highlight");
+	if (!r.success) return r;
+
+	r = config_parse_color(&cfg, &g_config.screen_color_background, "screen_color_background");
+	if (!r.success) return r;
+
+	return result_make_success();
+}
+
 Result config_init(const char *resources_path)
 {
 	strncpy(g_config.resources_dir, resources_path, sizeof(g_config.resources_dir));
@@ -42,13 +60,9 @@ Result config_init(const char *resources_path)
 
 	config_file_print(&cfg);
 
-	r = config_parse_color(&cfg, &g_config.screen_color_font, "screen_color_font");
-	if (!r.success) return r;
-
-	r = config_parse_color(&cfg, &g_config.screen_color_highlight, "screen_color_highlight");
-	if (!r.success) return r;
-
-	r = config_parse_color(&cfg, &g_config.screen_color_background, "screen_color_background");
+	snprintf(config_file_path, sizeof(config_file_path), "%s/%s",
+		g_config.resources_dir, config_file_gets(&cfg, "screen_colorscheme"));
+	r = config_load_colorscheme(config_file_path);
 	if (!r.success) return r;
 
 	strncpy(g_config.font_file, config_file_gets(&cfg, "screen_font_file"), sizeof(g_config.font_file));

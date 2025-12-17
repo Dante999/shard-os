@@ -72,9 +72,9 @@ static void on_app_clicked(struct Ui_Box *box)
 
 #define APP_GRID_X_START  50
 #define APP_GRID_Y_START  150
-#define APP_BOX_WIDTH     70
-#define APP_BOX_HEIGHT    80
-#define APP_TEXT_Y_OFFSET 25
+#define APP_BOX_WIDTH     100
+#define APP_BOX_HEIGHT    120
+#define APP_TEXT_Y_OFFSET 40 
 #define APPS_PER_LINE      5
 #define APP_BOX_CLEARANCE 30
 #define APP_BOX_FONT_SIZE g_config.screen_font_size_s
