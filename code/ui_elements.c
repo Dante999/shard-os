@@ -423,8 +423,17 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 
 		screen_draw_line( screen, x_start, y, x_end, y);
 
-		float progress = 0.5; // TODO: calculate
+		float progress = 0.0;
 
+		if (player->track_len_sec > 0) {
+			progress = (player->track_pos_sec*100)/player->track_len_sec;
+
+			// when optimized with line above, result is always 0.0000
+			progress /= 100;
+			log_debug("progress: %f\n", progress);
+		}
+		if (progress > 1.0) progress = 0.9;
+		if (progress < 0.0) progress = 0.1;
 		const int slider_w = 50;
 		const int slider_h = 20;
 
