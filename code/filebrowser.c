@@ -2,6 +2,7 @@
 
 #include "libcutils/logger.h"
 #include "libcutils/util_makros.h"
+#include "libcutils/util_strings.h"
 
 #include <dirent.h>
 #include <stdio.h>
@@ -22,12 +23,13 @@ static int filebrowser_sort_nodes(const void *lhs, const void *rhs)
 {
 	struct Node *n_lhs = (struct Node *) lhs;
 	struct Node *n_rhs = (struct Node *) rhs;
-	return strncmp(n_lhs->name, n_rhs->name, sizeof(n_lhs->name));
+	//return strncmp(n_lhs->name, n_rhs->name, sizeof(n_lhs->name));
+	return util_strcmpalphanum(n_lhs->name, n_rhs->name);
 }
 
 static void filebrowser_load(struct Filebrowser *fb)
 {
-	char path[1024];
+	char path[4096];
 	fb->node_count = 0;
 	if (strlen(fb->sub_path) > 0) {
 		snprintf(path, sizeof(path), "%s/%s", fb->root_path, fb->sub_path);

@@ -3,6 +3,8 @@
 #include "config.h"
 #include <SDL_render.h>
 
+#include <assert.h>
+
 #include "libcutils/logger.h"
 #include "libcutils/util_makros.h"
 
@@ -27,6 +29,21 @@ struct Audio_Len seconds_to_len(int seconds){
 	len.s = seconds % 60;
 
 	return len;
+}
+
+static void on_mediaplayer_button_pressed(struct Ui_Button *btn)
+{
+	log_debug("on_mediaplayer_button_pressed: %s\n", btn->id);
+	assert(btn->user_data != NULL);
+
+	struct Ui_Media_Player *ptr = (struct Ui_Media_Player*) btn->user_data;
+
+	if (ptr->on_button_clicked != NULL) {
+		ptr->on_button_clicked(btn->id);
+	}
+	else {
+		log_debug("no callback on mediaplayer set\n");
+	}
 }
 
 static void on_clickable_list_button_pressed(struct Ui_Button *btn)
@@ -308,13 +325,15 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 void ui_media_player_init(
 	struct Screen *screen,
 	struct Ui_Media_Player *player,
-	int x, int y, int w, int h)
+	int x, int y, int w, int h,
+	void (*on_button_clicked)(const char *id))
 {
 
 	player->x = x;
 	player->y = y;
 	player->w = w;
 	player->h = h;
+	player->on_button_clicked = on_button_clicked;
 
 	const int x_center     = x + (w/2);
 	const int button_width = 70;
@@ -324,29 +343,34 @@ void ui_media_player_init(
 
 	ui_button_init(screen, &player->internal.button_play, "play_button",
 		x_center-button_width/2,
-		y_button, "Play", NULL);
+		y_button, "Play", on_mediaplayer_button_pressed);
 
 	ui_button_init(screen, &player->internal.button_rewind, "rewind_button",
 		x_center-button_width/2-button_clearance-button_width,
-		y_button, "Rew", NULL);
+		y_button, "Rew", on_mediaplayer_button_pressed);
 
 	ui_button_init(screen, &player->internal.button_prev, "prev_button",
 		x_center-button_width/2-2*button_clearance-2*button_width,
-		y_button, "Prev", NULL);
+		y_button, "Prev", on_mediaplayer_button_pressed);
 
 	ui_button_init(screen, &player->internal.button_forward, "forward_button",
 		x_center+button_width/2+button_clearance,
-		y_button, "Fwd", NULL);
+		y_button, "Fwd", on_mediaplayer_button_pressed);
 
 	ui_button_init(screen, &player->internal.button_next, "next_button",
 		x_center+button_width/2+2*button_clearance+button_width,
-		y_button, "Next", NULL);
+		y_button, "Next", on_mediaplayer_button_pressed);
 
-	player->internal.button_play.w    = button_width;
-	player->internal.button_prev.w    = button_width;
-	player->internal.button_next.w    = button_width;
-	player->internal.button_rewind.w  = button_width;
-	player->internal.button_forward.w = button_width;
+	player->internal.button_play.w            = button_width;
+	player->internal.button_play.user_data    = player;
+	player->internal.button_prev.w            = button_width;
+	player->internal.button_prev.user_data    = player;
+	player->internal.button_next.w            = button_width;
+	player->internal.button_next.user_data    = player;
+	player->internal.button_rewind.w          = button_width;
+	player->internal.button_rewind.user_data  = player;
+	player->internal.button_forward.w         = button_width;
+	player->internal.button_forward.user_data = player;
 
 	player->internal.progress_bar.x = x+UI_MEDIA_PLAYER_CLEARANCE;
 	player->internal.progress_bar.y = y_progress;
@@ -430,7 +454,6 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 
 			// when optimized with line above, result is always 0.0000
 			progress /= 100;
-			log_debug("progress: %f\n", progress);
 		}
 		if (progress > 1.0) progress = 0.9;
 		if (progress < 0.0) progress = 0.1;

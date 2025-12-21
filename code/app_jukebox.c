@@ -28,6 +28,20 @@ static void refresh_clickable_list(struct Screen *screen)
 	}
 }
 
+static void on_media_player_clicked(const char *button_id)
+{
+	log_debug("mediaplayer button clicked: %s\n", button_id);
+
+	if (strcmp(button_id, "play_button") == 0) {
+		if (audioplayer_is_playing()) {
+			audioplayer_pause();
+		}
+		else {
+			audioplayer_resume();
+		}
+	}
+}
+
 static void on_filebrowser_clicked(int index)
 {
 	struct Node *node = &g_filebrowser.nodes[index];
@@ -71,7 +85,7 @@ void app_jukebox_init(struct Screen *screen, const char *filepath)
 	refresh_clickable_list(screen);
 	g_clickable_list.on_click = on_filebrowser_clicked;
 
-	ui_media_player_init(screen, &g_player, 50, y_start, 450, height);
+	ui_media_player_init(screen, &g_player, 50, y_start, 450, height, on_media_player_clicked);
 	audioplayer_init();
 }
 
@@ -81,20 +95,19 @@ void app_jukebox_open(struct Screen *screen)
 	(void) screen;
 }
 
-enum App_Status app_jukebox_render(struct Screen *screen)
+void app_jukebox_render(struct Screen *screen)
 {
-	screen_draw_text(screen, 
+	screen_draw_text(screen,
 		g_player.x, g_player.y-30,
 		g_config.screen_font_size_xs, g_filebrowser.sub_path);
 
 	g_player.track_pos_sec = audioplayer_get_current_pos_in_secs();
 	ui_clickable_list_render(screen, &g_clickable_list);
 	ui_media_player_render(screen, &g_player);
-
-	return APP_STATUS_RUNNING;
 }
 
 void app_jukebox_close(struct Screen *screen)
 {
 	(void) screen;
+	audioplayer_stop();
 }

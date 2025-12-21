@@ -3,6 +3,7 @@
 #include "config.h"
 #include "app_radio.h"
 #include "app_jukebox.h"
+#include "app_dice.h"
 #include "ui_elements.h"
 
 #include "libcutils/logger.h"
@@ -18,20 +19,22 @@
 struct App {
 	const char *name;
 	void (*app_open)(struct Screen *screen);
-	enum App_Status (*app_render)(struct Screen *screen);
+	void (*app_render)(struct Screen *screen);
 	void (*app_close)(struct Screen *screen);
 };
 
 int g_active_app_idx = -1;
 struct App g_apps[] = {
-	{"Radio"  , app_radio_open, app_radio_render, app_radio_close},
+	{"Radio"  , app_radio_open  , app_radio_render  , app_radio_close},
 	{"Jukebox", app_jukebox_open, app_jukebox_render, app_jukebox_close},
+	{"Dice"   , app_dice_open   , app_dice_render   , app_dice_close},
 };
 
 void ui_main_init(struct Screen *screen)
 {
 	app_radio_init(screen  , "data/radiostations.conf");
 	app_jukebox_init(screen, "data/jukebox");
+	app_dice_init(screen);
 }
 
 
@@ -84,7 +87,6 @@ static void ui_draw_app_icons(struct Screen *screen)
 		const int x = APP_GRID_X_START+(APP_BOX_WIDTH+APP_BOX_CLEARANCE)*(i%APPS_PER_LINE);
 		const int y = APP_GRID_Y_START+(APP_BOX_HEIGHT+APP_BOX_CLEARANCE+APP_BOX_FONT_SIZE)*(i/APPS_PER_LINE);
 
-		struct Screen_Dimension text_size = screen_get_text_dimension(screen, APP_BOX_FONT_SIZE, g_apps[i].name);
 
 		struct Ui_Box box = {
 			.x  = x,
@@ -98,11 +100,44 @@ static void ui_draw_app_icons(struct Screen *screen)
 
 		ui_box_render(screen, &box);
 
+
+#if 0
+		struct Screen_Dimension text_size = screen_get_text_dimension(screen, APP_BOX_FONT_SIZE, g_apps[i].name);
 		int clearance = (APP_BOX_WIDTH-text_size.w)/2;
+
 		if (clearance < 0) clearance = 0;
-
 		screen_draw_text(screen, x+clearance, y+APP_TEXT_Y_OFFSET, APP_BOX_FONT_SIZE, g_apps[i].name);
+#else
 
+		// TODO: Reuse and reduce complexity
+		const char *appname = g_apps[i].name;
+		const char *newline = strchr(appname, '\n');
+
+		if (newline == NULL) {
+			struct Screen_Dimension text_size = screen_get_text_dimension(screen, APP_BOX_FONT_SIZE, appname);
+			int clearance = (APP_BOX_WIDTH-text_size.w)/2;
+			if (clearance < 0) clearance = 0;
+			screen_draw_text(screen, x+clearance, y+APP_TEXT_Y_OFFSET, APP_BOX_FONT_SIZE, appname);
+		}
+		else {
+			struct Screen_Dimension text_size = {0};
+			int clearance = 0;
+			char buffer[40];
+
+			strncpy(buffer, appname, (newline-appname)+1);
+			text_size = screen_get_text_dimension(screen, APP_BOX_FONT_SIZE, buffer);
+			clearance = (APP_BOX_WIDTH-text_size.w)/2;
+			if (clearance < 0) clearance = 0;
+			screen_draw_text(screen, x+clearance, y+APP_TEXT_Y_OFFSET, APP_BOX_FONT_SIZE, buffer);
+
+			strncpy(buffer, newline, sizeof(buffer));
+			text_size = screen_get_text_dimension(screen, APP_BOX_FONT_SIZE, buffer);
+			clearance = (APP_BOX_WIDTH-text_size.w)/2;
+			if (clearance < 0) clearance = 0;
+			screen_draw_text(screen, x+clearance, y+APP_TEXT_Y_OFFSET+APP_BOX_FONT_SIZE+3, APP_BOX_FONT_SIZE, buffer);
+
+		}
+#endif
 	}
 }
 

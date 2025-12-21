@@ -33,7 +33,7 @@ struct Ui_Button {
 	int font_size;
 	enum Ui_Border border;
 	bool is_selectable;
-	void *user_data; // TODO: remove? unused?
+	void *user_data;
 };
 
 struct Ui_Box {
@@ -80,6 +80,7 @@ struct Ui_Media_Player {
 	char second_line[40];
 	int track_pos_sec;
 	int track_len_sec;
+	void (*on_button_clicked)(const char *id);
 	struct {
 		struct {
 			int x;
@@ -116,7 +117,9 @@ void ui_window_render(struct Screen *screen, struct Ui_Window *window);
 void ui_media_player_init(
 	struct Screen *screen,
 	struct Ui_Media_Player *player,
-	int x, int y, int w, int h);
+	int x, int y, int w, int h,
+	void (*on_button_clicked)(const char *id));
+
 void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *player);
 
 void ui_clickable_list_init(

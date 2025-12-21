@@ -6,7 +6,7 @@
 #include "libcutils/logger.h"
 
 static Mix_Music *g_current_file = NULL;
-
+static bool g_is_playing = false;
 // TODO: very very very likely memory leaks all over the place
 
 Result audioplayer_init(void)
@@ -19,14 +19,19 @@ Result audioplayer_init(void)
 
 	return result_make_success();
 }
-
-Result audioplayer_play_file(const char *filepath, struct Audio_File_Metadata *metadata)
+void audioplayer_stop(void)
 {
+	Mix_HaltMusic();
+
 	if (g_current_file != NULL) {
 		Mix_FreeMusic(g_current_file);
 		g_current_file = NULL;
 	}
+}
 
+Result audioplayer_play_file(const char *filepath, struct Audio_File_Metadata *metadata)
+{
+	audioplayer_stop();
 	g_current_file = Mix_LoadMUS(filepath);
 
 	if (g_current_file == NULL) {
@@ -44,6 +49,7 @@ Result audioplayer_play_file(const char *filepath, struct Audio_File_Metadata *m
 		strncpy(metadata->artist, artist, sizeof(metadata->artist));
 	}
 
+	g_is_playing = true;
 	return result_make_success();
 }
 
@@ -55,5 +61,20 @@ int audioplayer_get_current_pos_in_secs(void)
 	else {
 		return -1;
 	}
+}
+
+bool audioplayer_is_playing(void)
+{
+	return (g_is_playing && Mix_PlayingMusic());
+}
+
+void audioplayer_pause(void) {
+	Mix_PauseMusic();
+	g_is_playing = false;
+}
+
+void audioplayer_resume(void) {
+	Mix_ResumeMusic();
+	g_is_playing = true;
 }
 

@@ -27,6 +27,11 @@ static void on_radio_station_clicked(int index)
 	// TODO:
 }
 
+static void on_mediaplayer_clicked(const char *id)
+{
+	(void) id;
+}
+
 static void radiostation_add(struct Radio_Station_List *list, const char *name, const char *url)
 {
 	if (list->count >= ARRAY_SIZE(list->items)-1) return;
@@ -70,18 +75,16 @@ void app_radio_init(struct Screen *screen, const char *filepath)
 
 	g_clickable_list.on_click = on_radio_station_clicked;
 
-	ui_media_player_init(screen, &g_player, 50, y_start, 450, height);
+	ui_media_player_init(screen, &g_player, 50, y_start, 450, height, on_mediaplayer_clicked);
 	snprintf(g_player.first_line , sizeof(g_player.first_line) , "Arch Enemy");
 	snprintf(g_player.second_line, sizeof(g_player.second_line), "The Eagle Flies Alone");
 
 }
 
-enum App_Status app_radio_render(struct Screen *screen)
+void app_radio_render(struct Screen *screen)
 {
 	ui_clickable_list_render(screen, &g_clickable_list);
 	ui_media_player_render(screen, &g_player);
-
-	return APP_STATUS_RUNNING;
 }
 
 void app_radio_close(struct Screen *screen)
