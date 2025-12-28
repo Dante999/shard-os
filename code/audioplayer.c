@@ -78,3 +78,7 @@ void audioplayer_resume(void) {
 	g_is_playing = true;
 }
 
+void audioplayer_set_pos(double pos_secs)
+{
+	Mix_SetMusicPosition(pos_secs);
+}

@@ -62,6 +62,7 @@ struct Ui_Clickable_List {
 	void (*on_click)(int index);
 	struct {
 		char items[UI_LIST_MAX_ITEMS][UI_LIST_MAX_ITEM_LEN];
+		int index_selected_item;
 		size_t count;
 		size_t page_index;
 		size_t items_per_page;
@@ -80,6 +81,7 @@ struct Ui_Media_Player {
 	char second_line[40];
 	int track_pos_sec;
 	int track_len_sec;
+	bool is_playing;
 	void (*on_button_clicked)(const char *id);
 	struct {
 		struct {
@@ -130,5 +132,6 @@ void ui_clickable_list_init(
 void ui_clickable_list_clear(struct Ui_Clickable_List *list);
 void ui_clickable_list_append(struct Screen *screen, struct Ui_Clickable_List *list, const char *text);
 void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *list);
+bool ui_clickable_list_select(struct Ui_Clickable_List *list, int index);
 
 #endif // UI_ELEMENTS_H

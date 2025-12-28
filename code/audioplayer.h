@@ -16,5 +16,6 @@ bool audioplayer_is_playing(void);
 void audioplayer_pause(void);
 void audioplayer_resume(void);
 int audioplayer_get_current_pos_in_secs(void);
+void audioplayer_set_pos(double pos_secs);
 
 #endif // AUDIOPLAYER_H

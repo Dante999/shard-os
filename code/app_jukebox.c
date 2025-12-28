@@ -10,11 +10,31 @@
 #define MAX_BROWSER_ENTRY_LEN 40
 
 static char g_basepath[1024];
+static int  g_index_selected_file = -1;
 static struct Ui_Clickable_List  g_clickable_list = {0};
 static struct Ui_Media_Player    g_player         = {0};
 static struct Filebrowser        g_filebrowser    = {0};
-
 static struct Screen *g_screen = NULL;
+
+static void jukebox_play_file(struct Node *node, int index)
+{
+	char absolute_filepath[2048];
+	snprintf(absolute_filepath, sizeof(absolute_filepath),
+			"%s/%s/%s", g_filebrowser.root_path, g_filebrowser.sub_path, node->name);
+	log_debug("Playing file: %s\n", absolute_filepath);
+
+	struct Audio_File_Metadata metadata = {0};
+	Result r = audioplayer_play_file(absolute_filepath, &metadata);
+	if (r.success) {
+		strncpy(g_player.first_line , metadata.artist, sizeof(g_player.first_line));
+		strncpy(g_player.second_line, metadata.title , sizeof(g_player.second_line));
+		g_player.track_len_sec = (int) metadata.length_secs;
+		g_player.is_playing    = true;
+		g_index_selected_file  = index;
+		ui_clickable_list_select(&g_clickable_list, g_index_selected_file);
+		log_debug("title length: %ds\n", g_player.track_len_sec);
+	}
+}
 
 static void refresh_clickable_list(struct Screen *screen)
 {
@@ -34,12 +54,56 @@ static void on_media_player_clicked(const char *button_id)
 
 	if (strcmp(button_id, "play_button") == 0) {
 		if (audioplayer_is_playing()) {
+			g_player.is_playing = false;
 			audioplayer_pause();
 		}
 		else {
+			g_player.is_playing = true;
 			audioplayer_resume();
 		}
 	}
+	else if (strcmp(button_id, "rewind_button") == 0) {
+		if (g_player.track_pos_sec > 10) {
+			g_player.track_pos_sec -= 10;
+			audioplayer_set_pos((double) g_player.track_pos_sec);
+		}
+	}
+	else if (strcmp(button_id, "forward_button") == 0) {
+		if (g_player.track_pos_sec < g_player.track_len_sec-10) {
+			g_player.track_pos_sec += 10;
+			audioplayer_set_pos((double) g_player.track_pos_sec);
+		}
+	}
+	else if (strcmp(button_id, "prev_button") == 0) {
+		if (g_index_selected_file <= 0) return;
+
+		int tmp_index = g_index_selected_file-1;
+		while (tmp_index > 0) {
+			struct Node *node = &g_filebrowser.nodes[tmp_index];
+			if (node->type == NODE_TYPE_FILE) {
+				jukebox_play_file(node, tmp_index);
+				g_index_selected_file = tmp_index;
+				break;
+			}
+			tmp_index--;
+		}
+	}
+	else if (strcmp(button_id, "next_button") == 0) {
+		const int max_index = (int)g_clickable_list.internal.count-1;
+		if (g_index_selected_file >= max_index) return;
+
+		int tmp_index = g_index_selected_file+1;
+		while (tmp_index <= max_index) {
+			struct Node *node = &g_filebrowser.nodes[tmp_index];
+			if (node->type == NODE_TYPE_FILE) {
+				jukebox_play_file(node, tmp_index);
+				g_index_selected_file = tmp_index;
+				break;
+			}
+			tmp_index++;
+		}
+	}
+
 }
 
 static void on_filebrowser_clicked(int index)
@@ -53,20 +117,7 @@ static void on_filebrowser_clicked(int index)
 		refresh_clickable_list(g_screen);
 	}
 	else if (node->type == NODE_TYPE_FILE) {
-		char absolute_filepath[2048];
-		snprintf(absolute_filepath, sizeof(absolute_filepath),
-			"%s/%s/%s", g_filebrowser.root_path, g_filebrowser.sub_path, node->name);
-		log_debug("Playing file: %s\n", absolute_filepath);
-
-		struct Audio_File_Metadata metadata = {0};
-		Result r = audioplayer_play_file(absolute_filepath, &metadata);
-		if (r.success) {
-			strncpy(g_player.first_line , metadata.artist, sizeof(g_player.first_line));
-			strncpy(g_player.second_line, metadata.title , sizeof(g_player.second_line));
-			g_player.track_len_sec = (int) metadata.length_secs;
-
-			log_debug("title length: %ds\n", g_player.track_len_sec);
-		}
+		jukebox_play_file(node, index);
 	}
 }
 
@@ -93,6 +144,8 @@ void app_jukebox_init(struct Screen *screen, const char *filepath)
 void app_jukebox_open(struct Screen *screen)
 {
 	(void) screen;
+	g_index_selected_file = -1;
+	g_player.is_playing   = false;
 }
 
 void app_jukebox_render(struct Screen *screen)
@@ -109,5 +162,6 @@ void app_jukebox_render(struct Screen *screen)
 void app_jukebox_close(struct Screen *screen)
 {
 	(void) screen;
+	g_player.is_playing = false;
 	audioplayer_stop();
 }

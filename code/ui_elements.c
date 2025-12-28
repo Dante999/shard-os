@@ -212,6 +212,7 @@ void ui_clickable_list_init(struct Screen *screen,
 	list->attr.h = h;
 	list->attr.border = UI_BORDER_NONE;
 	list->internal.count = 0;
+	list->internal.index_selected_item = -1;
 
 	const int x_center     = list->attr.x + (list->attr.w/2);
 	const int y_pagination = (list->attr.y+list->attr.h)-(UI_BUTTON_HEIGHT+UI_CLICKABLE_LIST_PAGINATION_CLEARANCE);
@@ -284,6 +285,22 @@ void ui_clickable_list_append(struct Screen *screen, struct Ui_Clickable_List *l
 #endif
 }
 
+bool ui_clickable_list_select(struct Ui_Clickable_List *list, int index)
+{
+	if (index < 0) {
+		index = -1;
+		return true;
+	}
+
+	if (index >= (int) list->internal.count) {
+		return false;
+	}
+
+	list->internal.index_selected_item = index;
+	list->internal.page_index = (size_t)index / list->internal.items_per_page;
+	return true;
+}
+
 void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *list)
 {
 	if (list->attr.border == UI_BORDER_NORMAL) {
@@ -296,7 +313,8 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 
 	// TODO: render relative positions depending on page_index instead of
 	// static ones assigned during ui_clickable_list_append
-		struct Ui_Button btn;
+	struct Ui_Button btn;
+
 	for (size_t i=start; i < end; ++i) {
 		char btn_id[25];
 		snprintf(btn_id, sizeof(btn_id), "%zu", i);
@@ -306,6 +324,9 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 			list->internal.items[i], 
 			on_clickable_list_button_pressed);
 
+		if ((int)i == list->internal.index_selected_item) {
+			screen_draw_box_filled(screen, btn.x, btn.y, list->attr.w, btn.h, SCREEN_COLOR_HIGHLIGHT);
+		}
 		btn.user_data = list;
 		btn.w = list->attr.w;
 		ui_button_render(screen, &btn);
@@ -329,6 +350,7 @@ void ui_media_player_init(
 	void (*on_button_clicked)(const char *id))
 {
 
+	player->is_playing = false;
 	player->x = x;
 	player->y = y;
 	player->w = w;
@@ -378,6 +400,7 @@ void ui_media_player_init(
 
 }
 
+
 void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *player)
 {
 	screen_draw_box(screen, player->x, player->y, player->w, player->h, false);
@@ -396,6 +419,12 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 			font_size_second_line,
 			player->second_line);
 
+	if (player->is_playing) {
+		strncpy(player->internal.button_play.text, "Pse", sizeof(player->internal.button_play.text));
+	}
+	else {
+		strncpy(player->internal.button_play.text, "Play", sizeof(player->internal.button_play.text));
+	}
 	ui_button_render(screen, &player->internal.button_play);
 	ui_button_render(screen, &player->internal.button_rewind);
 	ui_button_render(screen, &player->internal.button_prev);
