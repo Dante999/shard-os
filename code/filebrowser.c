@@ -77,7 +77,10 @@ void filebrowser_enter(struct Filebrowser *fb, const char *dir_name)
 		}
 	}
 	else if (strlen(fb->sub_path) + strlen(dir_name) < sizeof(fb->sub_path)+2) {
-		strcat(fb->sub_path, "/");
+
+		if (strlen(fb->sub_path) > 0) {
+			strcat(fb->sub_path, "/");
+		}
 		strcat(fb->sub_path, dir_name);
 	}
 
