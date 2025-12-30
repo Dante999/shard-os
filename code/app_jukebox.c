@@ -1,5 +1,7 @@
 #include "app_jukebox.h"
 
+#include <linux/limits.h>
+
 #include "ui_elements.h"
 #include "config.h"
 #include "filebrowser.h"
@@ -14,13 +16,12 @@ static int  g_index_selected_file = -1;
 static struct Ui_Clickable_List  g_clickable_list = {0};
 static struct Ui_Media_Player    g_player         = {0};
 static struct Filebrowser        g_filebrowser    = {0};
-static struct Screen *g_screen = NULL;
 
 static void jukebox_play_file(struct Node *node, int index)
 {
-	char absolute_filepath[2048];
+	char absolute_filepath[PATH_MAX];
 	snprintf(absolute_filepath, sizeof(absolute_filepath),
-			"%s/%s/%s", g_filebrowser.root_path, g_filebrowser.sub_path, node->name);
+		"%s/%s/%s", g_filebrowser.root_path, g_filebrowser.sub_path, node->name);
 	log_debug("Playing file: %s\n", absolute_filepath);
 
 	struct Audio_File_Metadata metadata = {0};
@@ -36,7 +37,7 @@ static void jukebox_play_file(struct Node *node, int index)
 	}
 }
 
-static void refresh_clickable_list(struct Screen *screen)
+static void refresh_clickable_list(void)
 {
 	ui_clickable_list_clear(&g_clickable_list);
 
@@ -44,7 +45,7 @@ static void refresh_clickable_list(struct Screen *screen)
 		char entry[MAX_BROWSER_ENTRY_LEN];
 		strncpy(entry, g_filebrowser.nodes[i].name, sizeof(entry));
 		log_info("appending %s\n", entry);
-		ui_clickable_list_append(screen, &g_clickable_list, entry);
+		ui_clickable_list_append(&g_clickable_list, entry);
 	}
 }
 
@@ -114,7 +115,7 @@ static void on_filebrowser_clicked(int index)
 	if (node->type == NODE_TYPE_DIR || strcmp(node->name, "..") == 0) {
 		log_debug("Entering subdir!\n");
 		filebrowser_enter(&g_filebrowser, node->name);
-		refresh_clickable_list(g_screen);
+		refresh_clickable_list();
 	}
 	else if (node->type == NODE_TYPE_FILE) {
 		jukebox_play_file(node, index);
@@ -133,7 +134,7 @@ void app_jukebox_init(struct Screen *screen, const char *filepath)
 	const int height  = 350;
 
 	ui_clickable_list_init(screen, &g_clickable_list, 520, y_start, 460, height);
-	refresh_clickable_list(screen);
+	refresh_clickable_list();
 	g_clickable_list.on_click = on_filebrowser_clicked;
 
 	ui_media_player_init(screen, &g_player, 50, y_start, 450, height, on_media_player_clicked);

@@ -217,7 +217,7 @@ void ui_clickable_list_init(struct Screen *screen,
 	const int x_center     = list->attr.x + (list->attr.w/2);
 	const int y_pagination = (list->attr.y+list->attr.h)-(UI_BUTTON_HEIGHT+UI_CLICKABLE_LIST_PAGINATION_CLEARANCE);
 
-	list->internal.items_per_page = (y_pagination-list->attr.y) / UI_CLICKABLE_LIST_ENTRY_FACTOR;
+	list->internal.items_per_page = (size_t)((y_pagination-list->attr.y) / UI_CLICKABLE_LIST_ENTRY_FACTOR);
 
 	const int page_clearance    = UI_CLICKABLE_LIST_PAGINATION_CLEARANCE;
 	const int page_button_width = 70;
@@ -259,30 +259,14 @@ void ui_clickable_list_clear(struct Ui_Clickable_List *list)
 	list->internal.count=0;
 }
 
-void ui_clickable_list_append(struct Screen *screen, struct Ui_Clickable_List *list, const char *text)
+void ui_clickable_list_append(struct Ui_Clickable_List *list, const char *text)
 {
 	if (list->internal.count >= UI_LIST_MAX_ITEMS) return;
 
-#if 0
-	struct Ui_Button *btn = &list->internal.items[list->internal.count];
-
-	char buffer[40];
-	snprintf(buffer, sizeof(buffer), "%zu", list->internal.count);
-	ui_button_init(screen, btn, buffer,
-		list->attr.x, list->attr.y + (int)((list->internal.count) * UI_CLICKABLE_LIST_ENTRY_FACTOR),
-		text, on_clickable_list_button_pressed);
-
-	btn->user_data = list;
-	btn->w = list->attr.w;
-
-	++list->internal.count;
-#else
 	strncpy(
 		list->internal.items[list->internal.count++],
 		text,
 		UI_LIST_MAX_ITEM_LEN);
-
-#endif
 }
 
 bool ui_clickable_list_select(struct Ui_Clickable_List *list, int index)
@@ -320,8 +304,8 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 		snprintf(btn_id, sizeof(btn_id), "%zu", i);
 		ui_button_init(screen, &btn, btn_id,
 			list->attr.x,
-			list->attr.y + (int)((i-start) * UI_CLICKABLE_LIST_ENTRY_FACTOR),
-			list->internal.items[i], 
+			list->attr.y + (int)(i-start) * UI_CLICKABLE_LIST_ENTRY_FACTOR,
+			list->internal.items[i],
 			on_clickable_list_button_pressed);
 
 		if ((int)i == list->internal.index_selected_item) {
@@ -476,16 +460,16 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 
 		screen_draw_line( screen, x_start, y, x_end, y);
 
-		float progress = 0.0;
+		float progress = 0.0f;
 
 		if (player->track_len_sec > 0) {
-			progress = (player->track_pos_sec*100)/player->track_len_sec;
+			progress = (float)(player->track_pos_sec*100)/(float)player->track_len_sec;
 
 			// when optimized with line above, result is always 0.0000
 			progress /= 100;
 		}
-		if (progress > 1.0) progress = 0.9;
-		if (progress < 0.0) progress = 0.1;
+		if (progress > 1.0f) progress = 0.9f;
+		if (progress < 0.0f) progress = 0.1f;
 		const int slider_w = 50;
 		const int slider_h = 20;
 

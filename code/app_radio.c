@@ -3,6 +3,8 @@
 #include "ui_elements.h"
 #include "config.h"
 
+#include <linux/limits.h>
+
 #include "libcutils/util_makros.h"
 #include "libcutils/config_file.h"
 #include "libcutils/logger.h"
@@ -45,7 +47,7 @@ static void radiostation_add(struct Radio_Station_List *list, const char *name, 
 void app_radio_init(struct Screen *screen, const char *filepath)
 {
 	(void) filepath;
-	char fullpath[255];
+	char fullpath[PATH_MAX];
 
 	snprintf(fullpath, sizeof(fullpath), "%s/%s", g_config.resources_dir, filepath);
 	printf("Trying to load %s\n", fullpath);
@@ -70,7 +72,7 @@ void app_radio_init(struct Screen *screen, const char *filepath)
 
 	ui_clickable_list_init(screen, &g_clickable_list, 520, y_start, 460, height);
 	for (size_t i=0; i < g_radio_stations.count; ++i) {
-		ui_clickable_list_append(screen, &g_clickable_list, g_radio_stations.items[i].name);
+		ui_clickable_list_append(&g_clickable_list, g_radio_stations.items[i].name);
 	}
 
 	g_clickable_list.on_click = on_radio_station_clicked;

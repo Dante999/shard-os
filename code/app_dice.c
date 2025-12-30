@@ -32,6 +32,7 @@ static uint64_t random_uint64(void) {
 
 static void on_click_roll_dices(struct Ui_Box *box)
 {
+	(void) box;
 	uint64_t result = random_uint64()%g_dice_sides;
 
 	snprintf(g_roll_result, sizeof(g_roll_result), "%ld", result+1);
@@ -39,6 +40,8 @@ static void on_click_roll_dices(struct Ui_Box *box)
 
 void app_dice_init(struct Screen *screen)
 {
+	(void) screen;
+
 	g_roll_dice_box.x = 300;
 	g_roll_dice_box.y = 200;
 	g_roll_dice_box.w = 300;
@@ -53,6 +56,7 @@ void app_dice_init(struct Screen *screen)
 
 void app_dice_open(struct Screen *screen)
 {
+	(void) screen;
 }
 
 void app_dice_render(struct Screen *screen)
@@ -73,5 +77,6 @@ void app_dice_render(struct Screen *screen)
 
 void app_dice_close(struct Screen *screen)
 {
+	(void) screen;
 }
 

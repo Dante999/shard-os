@@ -77,15 +77,15 @@ static void on_app_clicked(struct Ui_Box *box)
 #define APP_GRID_Y_START  150
 #define APP_BOX_WIDTH     100
 #define APP_BOX_HEIGHT    120
-#define APP_TEXT_Y_OFFSET 40 
+#define APP_TEXT_Y_OFFSET 40
 #define APPS_PER_LINE      5
 #define APP_BOX_CLEARANCE 30
 #define APP_BOX_FONT_SIZE g_config.screen_font_size_s
 static void ui_draw_app_icons(struct Screen *screen)
 {
 	for (size_t i=0; i < ARRAY_SIZE(g_apps); ++i) {
-		const int x = APP_GRID_X_START+(APP_BOX_WIDTH+APP_BOX_CLEARANCE)*(i%APPS_PER_LINE);
-		const int y = APP_GRID_Y_START+(APP_BOX_HEIGHT+APP_BOX_CLEARANCE+APP_BOX_FONT_SIZE)*(i/APPS_PER_LINE);
+		const int x = APP_GRID_X_START+(APP_BOX_WIDTH+APP_BOX_CLEARANCE)*((int)i%APPS_PER_LINE);
+		const int y = APP_GRID_Y_START+(APP_BOX_HEIGHT+APP_BOX_CLEARANCE+APP_BOX_FONT_SIZE)*((int)i/APPS_PER_LINE);
 
 
 		struct Ui_Box box = {
@@ -124,7 +124,7 @@ static void ui_draw_app_icons(struct Screen *screen)
 			int clearance = 0;
 			char buffer[40];
 
-			strncpy(buffer, appname, (newline-appname)+1);
+			strncpy(buffer, appname, (size_t)(newline-appname)+1);
 			text_size = screen_get_text_dimension(screen, APP_BOX_FONT_SIZE, buffer);
 			clearance = (APP_BOX_WIDTH-text_size.w)/2;
 			if (clearance < 0) clearance = 0;

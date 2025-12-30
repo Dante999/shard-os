@@ -11,11 +11,9 @@
 #include "screen.h"
 #include "ui_main.h"
 
-#include <stdio.h>
 
-#define SCREEN_SCALE  1.0f
-#define SCREEN_WIDTH  ((int)1024*SCREEN_SCALE)
-#define SCREEN_HEIGHT ((int)600*SCREEN_SCALE)
+#define SCREEN_WIDTH  1024
+#define SCREEN_HEIGHT  600
 
 
 int main(int argc, char *argv[])

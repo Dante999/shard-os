@@ -130,8 +130,8 @@ void ui_clickable_list_init(
 	int x, int y, int w, int h);
 
 void ui_clickable_list_clear(struct Ui_Clickable_List *list);
-void ui_clickable_list_append(struct Screen *screen, struct Ui_Clickable_List *list, const char *text);
-void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *list);
+void ui_clickable_list_append(struct Ui_Clickable_List *list, const char *text);
 bool ui_clickable_list_select(struct Ui_Clickable_List *list, int index);
+void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *list);
 
 #endif // UI_ELEMENTS_H
