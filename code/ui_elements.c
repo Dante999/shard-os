@@ -420,7 +420,7 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 			player->second_line);
 
 	if (player->is_playing) {
-		strncpy(player->internal.button_play.text, "Pse", sizeof(player->internal.button_play.text));
+		strncpy(player->internal.button_play.text, "Stop", sizeof(player->internal.button_play.text));
 	}
 	else {
 		strncpy(player->internal.button_play.text, "Play", sizeof(player->internal.button_play.text));

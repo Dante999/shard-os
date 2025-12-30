@@ -43,10 +43,22 @@ Result audioplayer_play_file(const char *filepath, struct Audio_File_Metadata *m
 		metadata->length_secs = Mix_MusicDuration(g_current_file);
 
 		const char *title = Mix_GetMusicTitleTag(g_current_file);
-		strncpy(metadata->title, title, sizeof(metadata->title));
-
 		const char *artist = Mix_GetMusicArtistTag(g_current_file);
-		strncpy(metadata->artist, artist, sizeof(metadata->artist));
+
+		if (strlen(title) > 0 || strlen(artist) > 0) {
+			strncpy(metadata->title, title, sizeof(metadata->title));
+			strncpy(metadata->artist, artist, sizeof(metadata->artist));
+		}
+		else {
+			const char *filename = strrchr(filepath, '/');
+			if (filename != NULL) {
+				log_debug("%s contains not tags, using filename as metadata: '%s'\n", filepath, filename);
+				strncpy(metadata->title, filename+1, sizeof(metadata->title));
+			}
+			else {
+				strncpy(metadata->title, filepath, sizeof(metadata->title));
+			}
+		}
 	}
 
 	g_is_playing = true;
