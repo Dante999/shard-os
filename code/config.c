@@ -73,5 +73,6 @@ Result config_init(const char *resources_path)
 	g_config.screen_font_size_s  = config_file_geti(&cfg, "screen_font_size_s");
 	g_config.screen_font_size_xs = config_file_geti(&cfg, "screen_font_size_xs");
 
+	strncpy(g_config.audio_device_name, config_file_gets(&cfg, "audio_device_name"), sizeof(g_config.audio_device_name));
 	return result_make_success();
 }

@@ -23,6 +23,8 @@ struct Config {
 	struct Color screen_color_primary;
 	struct Color screen_color_highlight;
 	struct Color screen_color_background;
+
+	char audio_device_name[255];
 };
 
 extern struct Config g_config;
