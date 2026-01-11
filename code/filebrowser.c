@@ -9,6 +9,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define ENABLE_FILEBROWSER_DEBUG_LOG 0
+
 static void filebrowser_append_node(struct Filebrowser *fb, const char *name, enum Node_Type type)
 {
 	if (fb->node_count < ARRAY_SIZE(fb->nodes)) {
@@ -51,11 +53,15 @@ static void filebrowser_load(struct Filebrowser *fb)
 
 		if (ent->d_type == DT_DIR) {
 			filebrowser_append_node(fb, ent->d_name, NODE_TYPE_DIR);
-			printf("\tdir : %s\n", ent->d_name);
+#if ENABLE_FILEBROWSER_DEBUG_LOG
+			log_debug("\tdir : %s\n", ent->d_name);
+#endif
 		}
 		else if (ent->d_type == DT_REG) {
 			filebrowser_append_node(fb, ent->d_name, NODE_TYPE_FILE);
-			printf("\tfile: %s\n", ent->d_name);
+#if ENABLE_FILEBROWSER_DEBUG_LOG
+			log_debug("\tfile: %s\n", ent->d_name);
+#endif
 		}
 	}
 
@@ -82,6 +88,7 @@ void filebrowser_enter(struct Filebrowser *fb, const char *dir_name)
 			strcat(fb->sub_path, "/");
 		}
 		strcat(fb->sub_path, dir_name);
+		log_info("entering directory: %s\n", fb->sub_path);
 	}
 
 	filebrowser_load(fb);

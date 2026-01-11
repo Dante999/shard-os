@@ -10,7 +10,7 @@
 #include "config.h"
 #include "screen.h"
 #include "ui_main.h"
-
+#include "audio.h"
 
 #define SCREEN_WIDTH  1024
 #define SCREEN_HEIGHT  600
@@ -34,9 +34,15 @@ int main(int argc, char *argv[])
 
 	struct Screen screen = {0};
 
-	screen_init(&screen, SCREEN_WIDTH, SCREEN_HEIGHT);
+	result = screen_init(&screen, SCREEN_WIDTH, SCREEN_HEIGHT);
 	if (!result.success) {
 		log_error("failed to load screen: %s\n", result.msg);
+		return 1;
+	}
+	
+	result = audio_open();
+	if (!result.success) {
+		log_error("failed to load sound environment: %s\n", result.msg);
 		return 1;
 	}
 
@@ -50,5 +56,6 @@ int main(int argc, char *argv[])
 
 	}
 
+	audio_close();
 	screen_destroy(&screen);
 }

@@ -58,8 +58,6 @@ Result config_init(const char *resources_path)
 	Result r = config_file_init(&cfg, config_file_path);
 	if (!r.success) return r;
 
-	config_file_print(&cfg);
-
 	snprintf(config_file_path, sizeof(config_file_path), "%s/%s",
 		g_config.resources_dir, config_file_gets(&cfg, "screen_colorscheme"));
 	r = config_load_colorscheme(config_file_path);

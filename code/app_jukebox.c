@@ -44,7 +44,6 @@ static void refresh_clickable_list(void)
 	for (size_t i=0; i < g_filebrowser.node_count; ++i) {
 		char entry[MAX_BROWSER_ENTRY_LEN];
 		strncpy(entry, g_filebrowser.nodes[i].name, sizeof(entry));
-		log_info("appending %s\n", entry);
 		ui_clickable_list_append(&g_clickable_list, entry);
 	}
 }
@@ -113,7 +112,6 @@ static void on_filebrowser_clicked(int index)
 	log_debug("Filebrowser[%d] clicked: %s!\n", index, node->name);
 
 	if (node->type == NODE_TYPE_DIR || strcmp(node->name, "..") == 0) {
-		log_debug("Entering subdir!\n");
 		filebrowser_enter(&g_filebrowser, node->name);
 		refresh_clickable_list();
 	}
@@ -125,7 +123,7 @@ static void on_filebrowser_clicked(int index)
 void app_jukebox_init(struct Screen *screen, const char *filepath)
 {
 	snprintf(g_basepath, sizeof(g_basepath), "%s/%s", g_config.resources_dir, filepath);
-	printf("Trying to load %s\n", g_basepath);
+	log_debug("Trying to load %s\n", g_basepath);
 
 	filebrowser_init(&g_filebrowser, g_basepath);
 	//ui_clickable_list_clear(&g_clickable_list);
@@ -138,7 +136,6 @@ void app_jukebox_init(struct Screen *screen, const char *filepath)
 	g_clickable_list.on_click = on_filebrowser_clicked;
 
 	ui_media_player_init(screen, &g_player, 50, y_start, 450, height, on_media_player_clicked);
-	audioplayer_init();
 }
 
 

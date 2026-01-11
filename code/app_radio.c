@@ -2,6 +2,7 @@
 
 #include "ui_elements.h"
 #include "config.h"
+#include "audiostreamer.h"
 
 #include <linux/limits.h>
 
@@ -25,8 +26,16 @@ static struct Ui_Media_Player    g_player         = {0};
 
 static void on_radio_station_clicked(int index)
 {
-	log_debug("Radiostation[%d] clicked!\n", index);
-	// TODO:
+	struct Radio_Station *radio = &g_radio_stations.items[index];
+	log_debug("Radiostation clicked: [%zu] %s\n", index, radio->name);
+	audiostreamer_stop(); // TODO: block until curl thread stopped
+	Result res = audiostreamer_start(radio->url);
+
+	if (!res.success) {
+		log_error("failed to play radio station: %s", res.msg);
+	}
+	
+	strncpy(g_player.first_line , radio->name, sizeof(g_player.first_line));
 }
 
 static void on_mediaplayer_clicked(const char *id)
@@ -50,13 +59,12 @@ void app_radio_init(struct Screen *screen, const char *filepath)
 	char fullpath[PATH_MAX];
 
 	snprintf(fullpath, sizeof(fullpath), "%s/%s", g_config.resources_dir, filepath);
-	printf("Trying to load %s\n", fullpath);
+	log_debug("Trying to load %s\n", fullpath);
 	struct Config_File cfg = {0};
 	Result res = config_file_init(&cfg, fullpath);
-	config_file_print(&cfg);
 
 	if (!res.success) {
-		printf("ERROR: failed to load radio stations: %s\n", res.msg);
+		log_error("failed to load radio stations: %s\n", res.msg);
 		return;
 	}
 
@@ -81,6 +89,7 @@ void app_radio_init(struct Screen *screen, const char *filepath)
 	snprintf(g_player.first_line , sizeof(g_player.first_line) , "Arch Enemy");
 	snprintf(g_player.second_line, sizeof(g_player.second_line), "The Eagle Flies Alone");
 
+	audiostreamer_init();
 }
 
 void app_radio_render(struct Screen *screen)
@@ -91,6 +100,7 @@ void app_radio_render(struct Screen *screen)
 
 void app_radio_close(struct Screen *screen)
 {
+	audiostreamer_stop();
 	(void) screen;
 }
 
