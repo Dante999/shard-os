@@ -347,23 +347,23 @@ void ui_media_player_init(
 	const int y_progress   = y_button-40;
 	const int button_clearance = 20;
 
-	ui_button_init(screen, &player->internal.button_play, "play_button",
+	ui_button_init(screen, &player->internal.button_play, UI_MEDIA_PLAYER_PLAY_BUTTON_ID,
 		x_center-button_width/2,
 		y_button, "Play", on_mediaplayer_button_pressed);
 
-	ui_button_init(screen, &player->internal.button_rewind, "rewind_button",
+	ui_button_init(screen, &player->internal.button_rewind, UI_MEDIA_PLAYER_REW_BUTTON_ID,
 		x_center-button_width/2-button_clearance-button_width,
 		y_button, "Rew", on_mediaplayer_button_pressed);
 
-	ui_button_init(screen, &player->internal.button_prev, "prev_button",
+	ui_button_init(screen, &player->internal.button_prev, UI_MEDIA_PLAYER_PREV_BUTTON_ID,
 		x_center-button_width/2-2*button_clearance-2*button_width,
 		y_button, "Prev", on_mediaplayer_button_pressed);
 
-	ui_button_init(screen, &player->internal.button_forward, "forward_button",
+	ui_button_init(screen, &player->internal.button_forward,UI_MEDIA_PLAYER_FWD_BUTTON_ID,
 		x_center+button_width/2+button_clearance,
 		y_button, "Fwd", on_mediaplayer_button_pressed);
 
-	ui_button_init(screen, &player->internal.button_next, "next_button",
+	ui_button_init(screen, &player->internal.button_next, UI_MEDIA_PLAYER_NEXT_BUTTON_ID,
 		x_center+button_width/2+2*button_clearance+button_width,
 		y_button, "Next", on_mediaplayer_button_pressed);
 

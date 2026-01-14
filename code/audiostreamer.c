@@ -18,7 +18,16 @@
 
 #define RINGBUFFER_SIZE (5 * 1024 * 1024)
 
-
+/**
+ * TODO: fix lagging stream
+ *
+ * The problem is that sdl_mixer handles the ringbuffer as a file with a fixed
+ * start and end. It indicates this by seek the the beginning, then reading the
+ * first 12 bytes (maybe for checking the audio format?), then seeking to the
+ * end and then back to the beginning. With every seek operation we have to
+ * return the absolute position.
+ *
+ **/
 
 struct Audiostreamer{
 	uint8_t  rbuffer_data[RINGBUFFER_SIZE];
@@ -30,6 +39,7 @@ struct Audiostreamer{
 	bool stream_start;
 	bool quit;
 	Mix_Music *music;
+	bool is_playing;
 };
 
 static struct Audiostreamer g_streamer;
@@ -48,7 +58,6 @@ static size_t rwread(SDL_RWops *context, void *ptr, size_t size, size_t maxnum)
 
 	while (got < want) {
 		pthread_mutex_lock(&buf->lock);
-		log_debug("read: reading %zu bytes\n", maxnum);
 
 		while (ringbuffer_empty(&buf->rbuffer) && !buf->eof) {
 			log_warning("read: buffer empty, waiting...\n");
@@ -214,7 +223,10 @@ void audiostreamer_stop(void)
 	if (g_streamer.music != NULL) {
 		log_debug("freeing *music\n");
 		Mix_FreeMusic(g_streamer.music);
+		g_streamer.music = NULL;
 	}
+
+	g_streamer.is_playing = false;
 }
 
 Result audiostreamer_start(const char *url)
@@ -248,5 +260,11 @@ Result audiostreamer_start(const char *url)
 		result_make(false, "Mix_LoadMUS_RW error: %s\n", Mix_GetError());
 	}
 
+	g_streamer.is_playing = true;
 	return result_make_success();
+}
+
+bool audiostreamer_is_playing(void)
+{
+	return (g_streamer.is_playing && Mix_PlayingMusic());
 }

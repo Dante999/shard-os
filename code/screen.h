@@ -6,7 +6,7 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
-#define SCREEN_FPS            60
+#define SCREEN_FPS            30
 
 #define SCREEN_BORDER_WIDTH   10
 #define SCREEN_LOGICAL_WIDTH  1024

@@ -72,6 +72,11 @@ struct Ui_Clickable_List {
 	} internal;
 };
 
+#define UI_MEDIA_PLAYER_PLAY_BUTTON_ID "play_button"
+#define UI_MEDIA_PLAYER_REW_BUTTON_ID  "rewind_button"
+#define UI_MEDIA_PLAYER_PREV_BUTTON_ID "prev_button"
+#define UI_MEDIA_PLAYER_FWD_BUTTON_ID  "forward_button"
+#define UI_MEDIA_PLAYER_NEXT_BUTTON_ID "next_button"
 struct Ui_Media_Player {
 	int x;
 	int y;

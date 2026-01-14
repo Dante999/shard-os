@@ -5,6 +5,7 @@
 #include "audiostreamer.h"
 
 #include <linux/limits.h>
+#include <time.h>
 
 #include "libcutils/util_makros.h"
 #include "libcutils/config_file.h"
@@ -18,6 +19,7 @@ struct Radio_Station {
 struct Radio_Station_List {
 	struct Radio_Station items[255];
 	size_t count;
+	int selected_item;
 };
 
 static struct Ui_Clickable_List  g_clickable_list = {0};
@@ -26,6 +28,8 @@ static struct Ui_Media_Player    g_player         = {0};
 
 static void on_radio_station_clicked(int index)
 {
+	g_radio_stations.selected_item = index;
+
 	struct Radio_Station *radio = &g_radio_stations.items[index];
 	log_debug("Radiostation clicked: [%zu] %s\n", index, radio->name);
 	audiostreamer_stop(); // TODO: block until curl thread stopped
@@ -35,12 +39,34 @@ static void on_radio_station_clicked(int index)
 		log_error("failed to play radio station: %s", res.msg);
 	}
 	
+	g_player.is_playing = true;
+	g_player.track_pos_sec = 0;
 	strncpy(g_player.first_line , radio->name, sizeof(g_player.first_line));
 }
 
-static void on_mediaplayer_clicked(const char *id)
+static void on_mediaplayer_clicked(const char *button_id)
 {
-	(void) id;
+	if (strcmp(button_id, UI_MEDIA_PLAYER_PLAY_BUTTON_ID) == 0) {
+		if (audiostreamer_is_playing()) {
+			audiostreamer_stop();
+			g_player.is_playing = false;
+		}
+		else {
+			int index = g_radio_stations.selected_item;
+
+			if (index != -1) {
+				struct Radio_Station *radio = &g_radio_stations.items[index];
+				Result res = audiostreamer_start(radio->url);
+
+				if (!res.success) {
+					log_error("failed to play radio station: %s", res.msg);
+				}
+				g_player.is_playing = true;
+				g_player.track_pos_sec = 0;
+				strncpy(g_player.first_line , radio->name, sizeof(g_player.first_line));
+			}
+		}
+	}
 }
 
 static void radiostation_add(struct Radio_Station_List *list, const char *name, const char *url)
@@ -68,7 +94,8 @@ void app_radio_init(struct Screen *screen, const char *filepath)
 		return;
 	}
 
-	g_radio_stations.count = 0;
+	g_radio_stations.count         = 0;
+	g_radio_stations.selected_item = -1;
 	for (size_t i=0; i < cfg.count; ++i) {
 		radiostation_add(&g_radio_stations, cfg.keys[i], cfg.values[i]);
 	}
@@ -86,14 +113,35 @@ void app_radio_init(struct Screen *screen, const char *filepath)
 	g_clickable_list.on_click = on_radio_station_clicked;
 
 	ui_media_player_init(screen, &g_player, 50, y_start, 450, height, on_mediaplayer_clicked);
-	snprintf(g_player.first_line , sizeof(g_player.first_line) , "Arch Enemy");
-	snprintf(g_player.second_line, sizeof(g_player.second_line), "The Eagle Flies Alone");
 
 	audiostreamer_init();
 }
 
 void app_radio_render(struct Screen *screen)
 {
+	static int frame_count = 0;
+
+	if (g_player.is_playing) {
+		// TODO: not really stable upcounting...
+		++frame_count;
+		
+		if (frame_count >= SCREEN_FPS) {
+			g_player.track_pos_sec++;
+			frame_count = 0;
+		}
+	}
+	//static time_t timestamp_last = 0;
+
+	//if (g_player.is_playing) {
+	//	time_t timestamp_current = time(NULL);
+
+	//	if (timestamp_last-timestamp_current > 1) {
+	//		g_player.track_pos_sec++;
+	//	}
+	//}
+
+
+	
 	ui_clickable_list_render(screen, &g_clickable_list);
 	ui_media_player_render(screen, &g_player);
 }
