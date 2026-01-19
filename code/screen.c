@@ -4,14 +4,10 @@
 
 #include <unistd.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include <SDL.h>
-#include <SDL_image.h>
-#include <SDL_video.h>
-#include <SDL_ttf.h>
-#include <SDL_keycode.h>
-#include <SDL_timer.h>
-#include <SDL2_gfxPrimitives.h>
+#include <SDL3/SDL.h>
 #include "libcutils/logger.h"
 #include "libcutils/util_makros.h"
 
@@ -28,6 +24,17 @@
 #define CORNER_CUT  20
 
 
+static SDL_FColor color_as_fcolor(SDL_Color color)
+{
+	SDL_FColor fcolor = {
+		.r = (float)color.r/255,
+		.g = (float)color.g/255,
+		.b = (float)color.b/255,
+		.a = (float)color.a/255,
+	};
+
+	return fcolor;
+}
 static SDL_Color screen_get_color(enum Screen_Color color)
 {
 	struct Color *ptr = NULL;
@@ -42,7 +49,9 @@ static SDL_Color screen_get_color(enum Screen_Color color)
 	case SCREEN_COLOR_BACKGROUND:
 		ptr = &g_config.screen_color_background;
 		break;
-
+	case SCREEN_COLOR_NONE:
+		ptr = NULL;
+		break;
 	}
 
 	SDL_Color sdl_color = {0};
@@ -62,9 +71,9 @@ void screen_set_color(struct Screen *screen, enum Screen_Color color)
 	SDL_SetRenderDrawColor(screen->renderer, sdl_color.r, sdl_color.g, sdl_color.b, sdl_color.a);
 }
 
-static void check_sdl(int sdl_error)
+static void check_sdl(bool success)
 {
-	if (sdl_error != 0) {
+	if (!success) {
 		fprintf(stderr, "SDL_ERROR: %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
@@ -79,7 +88,7 @@ static Result screen_load_ttf_font(struct Screen *screen, const char *filepath)
 		return result_make(
 			false,
 			"could not initialize font %s: %s\n",
-			filepath, TTF_GetError());
+			filepath, SDL_GetError());
 	}
 
 
@@ -106,23 +115,32 @@ struct Screen_Dimension screen_get_text_dimension(struct Screen *screen, int fon
 		buffer[1] = '\0';
 	}
 
-	TTF_SetFontSize(screen->font, font_size);
+	TTF_SetFontSize(screen->font, (float)font_size);
 
 	SDL_Color font_color = {0};
 
 	SDL_Surface *tmp_surface = TTF_RenderText_Blended(
-			screen->font,
-			buffer,
-			font_color
-			);
+		screen->font,
+		buffer,
+		0,
+		font_color);
+
 	struct Screen_Dimension retval = {.w = tmp_surface->w, .h = tmp_surface->h};
-	SDL_FreeSurface(tmp_surface);
+	SDL_DestroySurface(tmp_surface);
 
 	return retval;
 }
 
 void screen_draw_icon(struct Screen *screen, int x, int y, int width, int height, const char *name)
 {
+// TODO: implement draw icon/svg
+	(void) screen;
+	(void) x;
+	(void) y;
+	(void) width;
+	(void) height;
+	(void) name;
+#if 0
 	SDL_Surface *tmp_surface = IMG_Load(name);
 	if (tmp_surface == NULL) {
 		printf("ERROR: unable to load %s!\n", name);
@@ -133,7 +151,7 @@ void screen_draw_icon(struct Screen *screen, int x, int y, int width, int height
 	SDL_Texture *texture = SDL_CreateTextureFromSurface(
 			screen->renderer,
 			tmp_surface);
-	
+
 	SDL_Color primary_color = screen_get_color(SCREEN_COLOR_PRIMARY);
 	SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureColorMod(texture, primary_color.r, primary_color.g, primary_color.b);   // tint multiplier for RGB
@@ -145,9 +163,10 @@ void screen_draw_icon(struct Screen *screen, int x, int y, int width, int height
 		.h = height
 	};
 
-	SDL_FreeSurface(tmp_surface);
-	SDL_RenderCopy(screen->renderer, texture, NULL, &text_rect);
+	SDL_DestroySurface(tmp_surface);
+	SDL_RenderTexture(screen->renderer, texture, NULL, &text_rect);
 	SDL_DestroyTexture(texture);
+#endif
 }
 
 void screen_draw_text(struct Screen *screen, int x, int y, int font_size, const char *fmt, ...)
@@ -169,88 +188,93 @@ void screen_draw_text(struct Screen *screen, int x, int y, int font_size, const 
 		buffer[1] = '\0';
 	}
 
-	TTF_SetFontSize(screen->font, font_size);
+	TTF_SetFontSize(screen->font, (float)font_size);
 
 	SDL_Color primary_color = screen_get_color(SCREEN_COLOR_PRIMARY);
 	SDL_Surface *tmp_surface = TTF_RenderText_Blended(
-			screen->font,
-			buffer,
-			primary_color
-			);
+		screen->font,
+		buffer,
+		0,
+		primary_color);
 
 	SDL_Texture *texture = SDL_CreateTextureFromSurface(
 			screen->renderer,
 			tmp_surface);
 
-	SDL_Rect text_rect = {
-		.x = x,
-		.y = y,
-		.w = tmp_surface->w,
-		.h = tmp_surface->h
+	SDL_FRect text_rect = {
+		.x = (float)x,
+		.y = (float)y,
+		.w = (float)tmp_surface->w,
+		.h = (float)tmp_surface->h
 	};
 
-	SDL_FreeSurface(tmp_surface);
-	SDL_RenderCopy(screen->renderer, texture, NULL, &text_rect);
+	SDL_DestroySurface(tmp_surface);
+	SDL_RenderTexture(screen->renderer, texture, NULL, &text_rect);
 	SDL_DestroyTexture(texture);
 }
 
 void screen_draw_line(struct Screen *screen, int x0, int y0, int x1, int y1)
 {
 	screen_set_color(screen, SCREEN_COLOR_PRIMARY);
-	SDL_RenderDrawLine(screen->renderer, x0, y0, x1, y1);
+	SDL_RenderLine(screen->renderer, (float)x0, (float)y0, (float)x1, (float)y1);
 }
 
 void screen_draw_box(struct Screen *screen, const int x, const int y, int width, int height, bool is_selected)
 {
-	SDL_Point points[] = {
-		{.x = x                 , .y = y},
-		{.x = x+width           , .y = y},
-		{.x = x+width           , .y = y+height-CORNER_CUT},
-		{.x = x+width-CORNER_CUT, .y = y+height},
-		{.x = x                 , .y = y+height},
-		{.x = x                 , .y = y},
-	};
-
 	if (is_selected) {
-		int16_t x_vec[ARRAY_SIZE(points)];
-		int16_t y_vec[ARRAY_SIZE(points)];
-
-		for (size_t i=0; i < ARRAY_SIZE(points); ++i) {
-			x_vec[i] = (int16_t) points[i].x;
-			y_vec[i] = (int16_t) points[i].y;
-		}
-
-		SDL_Color col = screen_get_color(SCREEN_COLOR_HIGHLIGHT);
-		filledPolygonRGBA(screen->renderer, x_vec, y_vec, 
-			ARRAY_SIZE(points), col.r, col.g, col.b, col.a);
+		screen_draw_box_filled(screen, x, y, width, height, SCREEN_COLOR_PRIMARY, SCREEN_COLOR_HIGHLIGHT);
 	}
-
-	screen_set_color(screen, SCREEN_COLOR_PRIMARY);
-	SDL_RenderDrawLines(screen->renderer, points, ARRAY_SIZE(points));
+	else {
+		screen_draw_box_filled(screen, x, y, width, height, SCREEN_COLOR_PRIMARY, SCREEN_COLOR_NONE);
+	}
 }
 
-void screen_draw_box_filled(struct Screen *screen, int x, int y, int width, int height, enum Screen_Color color)
+void screen_draw_box_filled(struct Screen *screen, int x, int y, int width, int height, enum Screen_Color fg_color, enum Screen_Color bg_color)
 {
-	// TODO: merge with screen_draw_box
-	SDL_Point points[] = {
-		{.x = x                 , .y = y},
-		{.x = x+width           , .y = y},
-		{.x = x+width           , .y = y+height-CORNER_CUT},
-		{.x = x+width-CORNER_CUT, .y = y+height},
-		{.x = x                 , .y = y+height},
-		{.x = x                 , .y = y},
+	/* 0 --------------- 1
+	 * |                 |
+	 * |                 2
+	 * 4 ------------- 3
+	 */
+	SDL_FPoint points[] = {
+		{.x = (float)x                        , .y = (float)y},
+		{.x = (float)x+(float)width           , .y = (float)y},
+		{.x = (float)x+(float)width           , .y = (float)y+(float)height-CORNER_CUT},
+		{.x = (float)x+(float)width-CORNER_CUT, .y = (float)y+(float)height},
+		{.x = (float)x                        , .y = (float)y+(float)height},
+		{.x = (float)x                        , .y = (float)y},
 	};
 
-		int16_t x_vec[ARRAY_SIZE(points)];
-		int16_t y_vec[ARRAY_SIZE(points)];
+	const int vertices_indexes[] = {
+		0, 1, 2,
+		0, 2, 3,
+		0, 3, 4
+	};
 
-		for (size_t i=0; i < ARRAY_SIZE(points); ++i) {
-			x_vec[i] = (int16_t) points[i].x;
-			y_vec[i] = (int16_t) points[i].y;
+	if (bg_color != SCREEN_COLOR_NONE) {
+		SDL_Vertex vertexes[ARRAY_SIZE(points)];
+
+		SDL_FColor fcolor = color_as_fcolor(screen_get_color(bg_color));
+		for (size_t i=0; i < ARRAY_SIZE(vertexes); ++i) {
+			vertexes[i].position.x = points[i].x;
+			vertexes[i].position.y = points[i].y;
+			vertexes[i].color.r = fcolor.r;
+			vertexes[i].color.g = fcolor.g;
+			vertexes[i].color.b = fcolor.b;
+			vertexes[i].color.a = fcolor.a;
 		}
-		SDL_Color col = screen_get_color(color);
-		filledPolygonRGBA(screen->renderer, x_vec, y_vec,
-			ARRAY_SIZE(points), col.r, col.g, col.b, col.a);
+
+		SDL_RenderGeometry(
+			screen->renderer,
+			NULL,
+			vertexes, ARRAY_SIZE(vertexes),
+			vertices_indexes, ARRAY_SIZE(vertices_indexes));
+	}
+
+	if (fg_color != SCREEN_COLOR_NONE) {
+		screen_set_color(screen, fg_color);
+		SDL_RenderLines(screen->renderer, points, ARRAY_SIZE(points));
+	}
 }
 
 void screen_draw_text_boxed(struct Screen *screen, int x, int y, int font_size, int min_width, bool is_selected, const char *fmt, ...)
@@ -272,39 +296,39 @@ void screen_draw_text_boxed(struct Screen *screen, int x, int y, int font_size, 
 		buffer[1] = '\0';
 	}
 
-	TTF_SetFontSize(screen->font, font_size);
+	TTF_SetFontSize(screen->font, (float)font_size);
 
 	SDL_Color primary_color = screen_get_color(SCREEN_COLOR_PRIMARY);
 	SDL_Surface *tmp_surface = TTF_RenderText_Blended(
-			screen->font,
-			buffer,
-			primary_color
-			);
+		screen->font,
+		buffer,
+		0,
+		primary_color);
 
 	SDL_Texture *texture = SDL_CreateTextureFromSurface(
 			screen->renderer,
 			tmp_surface);
 
-	SDL_Rect text_rect = {
-		.x = x+TEXT_BORDER,
-		.y = y+TEXT_BORDER,
-		.w = tmp_surface->w,
-		.h = tmp_surface->h
+	SDL_FRect text_rect = {
+		.x = (float) x+TEXT_BORDER,
+		.y = (float) y+TEXT_BORDER,
+		.w = (float) tmp_surface->w,
+		.h = (float) tmp_surface->h
 	};
 
-	const int text_width = text_rect.w+2*TEXT_BORDER;
+	const int text_width = (int)text_rect.w+2*TEXT_BORDER;
 
 	screen_draw_box(
 		screen,
 		x,
 		y,
 		MAX(min_width, text_width), // pick greater one
-		text_rect.h+2*TEXT_BORDER,
+		(int) text_rect.h+2*TEXT_BORDER,
 		is_selected
 	);
 
-	SDL_FreeSurface(tmp_surface);
-	SDL_RenderCopy(screen->renderer, texture, NULL, &text_rect);
+	SDL_DestroySurface(tmp_surface);
+	SDL_RenderTexture(screen->renderer, texture, NULL, &text_rect);
 	SDL_DestroyTexture(texture);
 }
 
@@ -313,17 +337,17 @@ void screen_draw_window(struct Screen *screen, int x, int y, int width, int heig
 {
 	static const int close_button_width = 50;
 	/*
-	 *                           *--\
-	 *   *----------------------/    x
-	 *  /                            x
-	 * *                             x
-	 * |                             x
-	 * |                             x
-	 * |                             x
-	 * |                             x
-	 * |                             x
-	 *  x                           x
-	 *   xxxxxxxxxxxxxxxxxxxxxxxxxxx
+	 *                           2---3
+	 *   0----------------------1    |
+	 * 8                             |
+	 * |                             |
+	 * |                             |
+	 * |                             |
+	 * |                             |
+	 * |                             |
+	 * |                             |
+	 * 7                             4
+	 *   6 ----------------------- 5
 	 */
 
 	const int x_left   = x;
@@ -331,41 +355,57 @@ void screen_draw_window(struct Screen *screen, int x, int y, int width, int heig
 	const int y_top    = y;
 	const int y_bottom = y+height;
 
-	SDL_Point points[] = {
-		{.x = x_left+CORNER_CUT                         , .y = y_top+CORNER_CUT},
-		{.x = x_right-(2*CORNER_CUT)-close_button_width , .y = y_top+CORNER_CUT},
-		{.x = x_right-(1*CORNER_CUT)-close_button_width , .y = y_top},
+	SDL_FPoint points[] = {
+		{.x = (float)x_left+CORNER_CUT                         , .y = (float)y_top+CORNER_CUT},
+		{.x = (float)x_right-(2*CORNER_CUT)-close_button_width , .y = (float)y_top+CORNER_CUT},
+		{.x = (float)x_right-(1*CORNER_CUT)-close_button_width , .y = (float)y_top},
 		//{.x = x_right-(1*CORNER_CUT)                    , .y = y_top},
-		{.x = x_right                                   , .y = y_top},
-		{.x = x_right                                   , .y = y_bottom-CORNER_CUT},
-		{.x = x_right-CORNER_CUT                        , .y = y_bottom},
-		{.x = x_left+CORNER_CUT                         , .y = y_bottom},
-		{.x = x_left                                    , .y = y_bottom-CORNER_CUT},
-		{.x = x_left                                    , .y = y_top+(2*CORNER_CUT)},
-		{.x = x_left+CORNER_CUT                         , .y = y_top+CORNER_CUT},
+		{.x = (float)x_right                                   , .y = (float)y_top},
+		{.x = (float)x_right                                   , .y = (float)y_bottom-CORNER_CUT},
+		{.x = (float)x_right-CORNER_CUT                        , .y = (float)y_bottom},
+		{.x = (float)x_left+CORNER_CUT                         , .y = (float)y_bottom},
+		{.x = (float)x_left                                    , .y = (float)y_bottom-CORNER_CUT},
+		{.x = (float)x_left                                    , .y = (float)y_top+(2*CORNER_CUT)},
+		{.x = (float)x_left+CORNER_CUT                         , .y = (float)y_top+CORNER_CUT},
 	};
 
-	if (true) {
-		int16_t x_vec[ARRAY_SIZE(points)];
-		int16_t y_vec[ARRAY_SIZE(points)];
+	const int vertices_indexes[] = {
+		0, 1, 5,
+		5, 1, 2,
+		5, 2, 4,
+		4, 2, 3,
+		5, 6, 7,
+		5, 7, 8,
+		5, 8, 0
+	};
 
-		for (size_t i=0; i < ARRAY_SIZE(points); ++i) {
-			x_vec[i] = (int16_t) points[i].x;
-			y_vec[i] = (int16_t) points[i].y;
-		}
-		SDL_Color col = screen_get_color(SCREEN_COLOR_HIGHLIGHT);
-		filledPolygonRGBA(screen->renderer, x_vec, y_vec, ARRAY_SIZE(points), col.r, col.g, col.b, col.a);
+	SDL_Vertex vertexes[ARRAY_SIZE(points)];
+
+	SDL_FColor fcolor = color_as_fcolor(screen_get_color(SCREEN_COLOR_HIGHLIGHT));
+	for (size_t i=0; i < ARRAY_SIZE(vertexes); ++i) {
+		vertexes[i].position.x = points[i].x;
+		vertexes[i].position.y = points[i].y;
+		vertexes[i].color.r = fcolor.r;
+		vertexes[i].color.g = fcolor.g;
+		vertexes[i].color.b = fcolor.b;
+		vertexes[i].color.a = fcolor.a;
 	}
 
+	SDL_RenderGeometry(
+			screen->renderer,
+			NULL,
+			vertexes, ARRAY_SIZE(vertexes),
+			vertices_indexes, ARRAY_SIZE(vertices_indexes));
+
 	screen_set_color(screen, SCREEN_COLOR_PRIMARY);
-	SDL_RenderDrawLines(screen->renderer, points, ARRAY_SIZE(points));
+	SDL_RenderLines(screen->renderer, points, ARRAY_SIZE(points));
 	screen_draw_text(screen, x_left+CORNER_CUT+10, y_top+CORNER_CUT+10, g_config.screen_font_size_l, name);
 }
 
-static void screen_handle_keypress(struct Screen *screen, SDL_Keysym *key)
+static void screen_handle_keypress(struct Screen *screen, SDL_Keycode *key)
 {
-	switch(key->sym) {
-		case SDLK_q      : screen->quit = true; break;
+	switch(*key) {
+		case SDLK_Q      : screen->quit = true; break;
 		case SDLK_ESCAPE : screen->quit = true; break;
 	}
 }
@@ -404,7 +444,7 @@ void screen_draw_option(
 Result screen_init(struct Screen *screen, int width, int height)
 {
 
-	if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
+	if(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
 	{
 		return result_make(false, "SDL could not be initialized!\n"
 			"SDL_Error: %s\n", SDL_GetError());
@@ -417,17 +457,14 @@ Result screen_init(struct Screen *screen, int width, int height)
 		return result_make(false, "SDL can not disable compositor bypass!");
 	}
 #endif
-	if(!SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best"))
-	{
-		return result_make(false, "SDL can not set render scale quality!");
-	}
 
 	// Create window
-	screen->window = SDL_CreateWindow("Dartosphere",
-			SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED,
-			width, height,
-			SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN_DESKTOP*/);
+	screen->window = SDL_CreateWindow(
+			"Dartosphere",
+			width,
+			height,
+			0 /*| SDL_WINDOW_FULLSCREEN_DESKTOP*/);
+
 	if(!screen->window) {
 		return result_make(false, "Window could not be created!\n"
 				"SDL_Error: %s\n", SDL_GetError());
@@ -439,13 +476,18 @@ Result screen_init(struct Screen *screen, int width, int height)
 
 
 	// Create renderer
-	screen->renderer  = SDL_CreateRenderer(screen->window, -1, SDL_RENDERER_ACCELERATED);
+	screen->renderer  = SDL_CreateRenderer(screen->window, NULL);
 	if(!screen->renderer) {
 		return result_make(false, "Renderer could not be created!\n"
 				"SDL_Error: %s\n", SDL_GetError());
 	}
 
-	SDL_RenderSetLogicalSize(screen->renderer, SCREEN_LOGICAL_WIDTH, SCREEN_LOGICAL_HEIGHT);
+	SDL_SetRenderLogicalPresentation(
+		screen->renderer,
+		SCREEN_LOGICAL_WIDTH,
+		SCREEN_LOGICAL_HEIGHT,
+		SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+
 	SDL_SetRenderDrawBlendMode(screen->renderer, SDL_BLENDMODE_BLEND);
 
 	char font_filepath[1024];
@@ -481,23 +523,23 @@ void screen_rendering_start(struct Screen *screen)
 
 		switch (event.type) {
 
-		case SDL_QUIT:
+		case SDL_EVENT_QUIT:
 			screen->quit = true;
 			break;
 
-		case SDL_KEYDOWN:
-			screen_handle_keypress(screen, &event.key.keysym);
+		case SDL_EVENT_KEY_DOWN:
+			screen_handle_keypress(screen, &event.key.key);
 			break;
 
-		case SDL_MOUSEBUTTONDOWN:
+		case SDL_EVENT_MOUSE_BUTTON_DOWN:
 			// we dont' care which mouse button was clicked
 			screen->mouse_clicked = true;
 			break;
 
-		case SDL_FINGERDOWN:
+		case SDL_EVENT_FINGER_DOWN:
 			screen->mouse_clicked = true;
 			int w,h;
-			SDL_GetRendererOutputSize(screen->renderer, &w, &h);
+			SDL_GetCurrentRenderOutputSize(screen->renderer, &w, &h);
 			screen->mouse_x = (int)((float)w*event.tfinger.x);
 			screen->mouse_y = (int)((float)h*event.tfinger.y);
 			break;
@@ -516,12 +558,12 @@ void screen_rendering_stop(struct Screen *screen)
 {
 	SDL_RenderPresent(screen->renderer);
 
-	const uint32_t ticks_used = SDL_GetTicks() - screen->ticks;
+	const uint64_t ticks_used = SDL_GetTicks() - screen->ticks;
 
-	int32_t delta = (1000/SCREEN_FPS)-ticks_used;
+	int64_t delta_ms = (1000/SCREEN_FPS)-ticks_used;
 
-	if (delta < 0) return;
+	if (delta_ms < 0) return;
 
-	SDL_Delay((uint32_t)delta);
+	SDL_Delay((uint32_t)delta_ms);
 }
 

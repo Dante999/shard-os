@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdio.h>
 
 /**
  * right side: list of buttons to select amount of dice sides (3,4,6,15,20, 100, ...)

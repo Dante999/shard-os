@@ -1,6 +1,7 @@
 #include "app_jukebox.h"
 
 #include <linux/limits.h>
+#include <stdio.h>
 
 #include "ui_elements.h"
 #include "config.h"

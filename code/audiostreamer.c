@@ -1,7 +1,7 @@
 #include "audiostreamer.h"
 
-#include <SDL.h>
-#include <SDL_mixer.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_audio.h>
 #include <curl/curl.h>
 
 #include <pthread.h>

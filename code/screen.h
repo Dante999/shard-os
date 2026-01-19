@@ -3,8 +3,8 @@
 
 #include "libcutils/result.h"
 
-#include <SDL.h>
-#include <SDL_ttf.h>
+#include <SDL3/SDL.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 #define SCREEN_FPS            30
 
@@ -20,10 +20,10 @@ struct Screen {
 	SDL_Window     *window;
 	SDL_Renderer   *renderer;
 	TTF_Font       *font;
-	int            mouse_x;
-	int            mouse_y;
+	float          mouse_x;
+	float          mouse_y;
 	bool           mouse_clicked;
-	uint32_t       ticks;
+	uint64_t       ticks;
 	bool           quit;
 };
 
@@ -33,6 +33,7 @@ struct Screen_Dimension {
 };
 
 enum Screen_Color {
+	SCREEN_COLOR_NONE,
 	SCREEN_COLOR_PRIMARY,
 	SCREEN_COLOR_HIGHLIGHT,
 	SCREEN_COLOR_BACKGROUND
@@ -54,7 +55,7 @@ void screen_draw_window(struct Screen *screen, int x, int y, int width, int heig
 void screen_draw_text(struct Screen *screen, int x, int y, int font_size, const char *fmt, ...);
 void screen_draw_text_boxed(struct Screen *screen, int x, int y, int font_size, int min_width, bool is_selected, const char *fmt, ...);
 void screen_draw_box(struct Screen *screen, int x, int y, int width, int height, bool is_selected);
-void screen_draw_box_filled(struct Screen *screen, int x, int y, int width, int height, enum Screen_Color color);
+void screen_draw_box_filled(struct Screen *screen, int x, int y, int width, int height, enum Screen_Color fg_color, enum Screen_Color bg_color);
 
 
 #endif // SCREEN_H

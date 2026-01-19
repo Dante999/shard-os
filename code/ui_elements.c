@@ -1,9 +1,12 @@
 #include "ui_elements.h"
 
 #include "config.h"
-#include <SDL_render.h>
+#include <SDL3/SDL_render.h>
 
 #include <assert.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "libcutils/logger.h"
 #include "libcutils/util_makros.h"
@@ -309,7 +312,7 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 			on_clickable_list_button_pressed);
 
 		if ((int)i == list->internal.index_selected_item) {
-			screen_draw_box_filled(screen, btn.x, btn.y, list->attr.w, btn.h, SCREEN_COLOR_HIGHLIGHT);
+			screen_draw_box_filled(screen, btn.x, btn.y, list->attr.w, btn.h, SCREEN_COLOR_HIGHLIGHT, SCREEN_COLOR_HIGHLIGHT);
 		}
 		btn.user_data = list;
 		btn.w = list->attr.w;
@@ -480,6 +483,7 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 			y-slider_h/2,
 			slider_w,
 			slider_h,
+			SCREEN_COLOR_PRIMARY,
 			SCREEN_COLOR_PRIMARY);
 	}
 

@@ -1,7 +1,7 @@
 #include "ui_main.h"
 
 #include "config.h"
-#include "app_radio.h"
+//#include "app_radio.h"
 #include "app_jukebox.h"
 #include "app_dice.h"
 #include "ui_elements.h"
@@ -10,6 +10,8 @@
 #include "libcutils/util_makros.h"
 
 #include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define UI_STATUS_BAR_HEIGHT 70
 #define UI_STATUS_BAR_TEXT_Y_START     20
@@ -25,14 +27,14 @@ struct App {
 
 int g_active_app_idx = -1;
 struct App g_apps[] = {
-	{"Radio"  , app_radio_open  , app_radio_render  , app_radio_close},
+//	{"Radio"  , app_radio_open  , app_radio_render  , app_radio_close},
 	{"Jukebox", app_jukebox_open, app_jukebox_render, app_jukebox_close},
 	{"Dice"   , app_dice_open   , app_dice_render   , app_dice_close},
 };
 
 void ui_main_init(struct Screen *screen)
 {
-	app_radio_init(screen  , "data/radiostations.conf");
+	//app_radio_init(screen  , "data/radiostations.conf");
 	app_jukebox_init(screen, "data/jukebox");
 	app_dice_init(screen);
 }
