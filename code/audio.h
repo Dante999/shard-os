@@ -3,10 +3,18 @@
 
 #include "libcutils/result.h"
 
-//struct Audio_Callback {
-//void (*)(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount);
-//}
-Result audio_open(void);
+struct Audio_File_Metadata {
+	char artist[255];
+	char title[255];
+	double length_secs;
+};
+
+Result audio_play_file(const char *filepath, struct Audio_File_Metadata *metadata);
+bool audio_is_playing(void);
+void audio_pause(void);
+void audio_resume(void);
 void audio_close(void);
+int audio_get_current_pos_in_secs(void);
+void audio_set_pos(double pos_secs);
 
 #endif // AUDIO_H

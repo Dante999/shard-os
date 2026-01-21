@@ -39,12 +39,6 @@ int main(int argc, char *argv[])
 		log_error("failed to load screen: %s\n", result.msg);
 		return 1;
 	}
-	
-	result = audio_open();
-	if (!result.success) {
-		log_error("failed to load sound environment: %s\n", result.msg);
-		return 1;
-	}
 
 	ui_main_init(&screen);
 
@@ -53,9 +47,7 @@ int main(int argc, char *argv[])
 		ui_main_render(&screen);
 
 		screen_rendering_stop(&screen);
-
 	}
 
-	audio_close();
 	screen_destroy(&screen);
 }

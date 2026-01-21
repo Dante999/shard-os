@@ -6,7 +6,7 @@
 #include "ui_elements.h"
 #include "config.h"
 #include "filebrowser.h"
-#include "audioplayer.h"
+#include "audio.h"
 
 #include "libcutils/logger.h"
 
@@ -26,7 +26,7 @@ static void jukebox_play_file(struct Node *node, int index)
 	log_debug("Playing file: %s\n", absolute_filepath);
 
 	struct Audio_File_Metadata metadata = {0};
-	Result r = audioplayer_play_file(absolute_filepath, &metadata);
+	Result r = audio_play_file(absolute_filepath, &metadata);
 	if (r.success) {
 		strncpy(g_player.first_line , metadata.artist, sizeof(g_player.first_line));
 		strncpy(g_player.second_line, metadata.title , sizeof(g_player.second_line));
@@ -35,6 +35,9 @@ static void jukebox_play_file(struct Node *node, int index)
 		g_index_selected_file  = index;
 		ui_clickable_list_select(&g_clickable_list, g_index_selected_file);
 		log_debug("title length: %ds\n", g_player.track_len_sec);
+	}
+	else {
+		log_error("failed to play file: %s\n", r.msg);
 	}
 }
 
@@ -54,25 +57,27 @@ static void on_media_player_clicked(const char *button_id)
 	log_debug("mediaplayer button clicked: %s\n", button_id);
 
 	if (strcmp(button_id, "play_button") == 0) {
-		if (audioplayer_is_playing()) {
+		if (audio_is_playing()) {
+			log_trace("pausing audio...\n");
 			g_player.is_playing = false;
-			audioplayer_pause();
+			audio_pause();
 		}
 		else {
+			log_trace("resuming audio...\n");
 			g_player.is_playing = true;
-			audioplayer_resume();
+			audio_resume();
 		}
 	}
 	else if (strcmp(button_id, "rewind_button") == 0) {
 		if (g_player.track_pos_sec > 10) {
 			g_player.track_pos_sec -= 10;
-			audioplayer_set_pos((double) g_player.track_pos_sec);
+			audio_set_pos((double) g_player.track_pos_sec);
 		}
 	}
 	else if (strcmp(button_id, "forward_button") == 0) {
 		if (g_player.track_pos_sec < g_player.track_len_sec-10) {
 			g_player.track_pos_sec += 10;
-			audioplayer_set_pos((double) g_player.track_pos_sec);
+			audio_set_pos((double) g_player.track_pos_sec);
 		}
 	}
 	else if (strcmp(button_id, "prev_button") == 0) {
@@ -153,7 +158,7 @@ void app_jukebox_render(struct Screen *screen)
 		g_player.x, g_player.y-30,
 		g_config.screen_font_size_xs, g_filebrowser.sub_path);
 
-	g_player.track_pos_sec = audioplayer_get_current_pos_in_secs();
+	g_player.track_pos_sec = audio_get_current_pos_in_secs();
 	ui_clickable_list_render(screen, &g_clickable_list);
 	ui_media_player_render(screen, &g_player);
 }
@@ -161,6 +166,7 @@ void app_jukebox_render(struct Screen *screen)
 void app_jukebox_close(struct Screen *screen)
 {
 	(void) screen;
+
+	audio_close();
 	g_player.is_playing = false;
-	audioplayer_stop();
 }

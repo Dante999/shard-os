@@ -4,10 +4,31 @@
 
 #include "libcutils/logger.h"
 
+
+
+struct Audioplayer {
+	SDL_AudioStream *stream;
+};
+
+static struct Audioplayer g_audioplayer = {0};
+/**
+ * maybe this? https://github.com/icculus/SDL_sound/blob/main/examples/playsound_simple.c
+ * => not available on raspbian 
+ * => use mpg123 for conversion of mp3
+ */
+
 //static Mix_Music *g_current_file = NULL;
 static void *g_current_file = NULL;
 static bool g_is_playing = false;
 // TODO: very very very likely memory leaks all over the place
+
+static void callback_fill_stream_with_data(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
+{
+	(void) userdata;
+	(void) stream;
+	(void) additional_amount;
+	(void) total_amount;
+}
 
 void audioplayer_stop(void)
 {
@@ -21,6 +42,26 @@ void audioplayer_stop(void)
 
 Result audioplayer_play_file(const char *filepath, struct Audio_File_Metadata *metadata)
 {
+#if 0
+/* We're just playing a single thing here, so we'll use the simplified option.
+       We are always going to feed audio in as mono, float32 data at 8000Hz.
+       The stream will convert it to whatever the hardware wants on the other side. */
+    spec.channels = 1;
+    spec.format = SDL_AUDIO_F32;
+    spec.freq = 8000;
+    stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+    if (!stream) {
+        SDL_Log("Couldn't create audio stream: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+
+    /* SDL_OpenAudioDeviceStream starts the device paused. You have to tell it to start! */
+    SDL_ResumeAudioStreamDevice(stream);
+#endif 
+
+
+	
+
 	audioplayer_stop();
 	//g_current_file = Mix_LoadMUS(filepath);
 
@@ -79,8 +120,10 @@ void audioplayer_pause(void) {
 }
 
 void audioplayer_resume(void) {
-	//Mix_ResumeMusic();
-	g_is_playing = true;
+	if (g_audioplayer.stream != NULL) {
+		SDL_ResumeAudioStreamDevice(g_audioplayer.stream);
+		g_is_playing = true;
+	}
 }
 
 void audioplayer_set_pos(double pos_secs)
