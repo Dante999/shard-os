@@ -68,7 +68,9 @@ static void on_clickable_list_button_pressed(struct Ui_Button *btn)
 	}
 
 	if (strcmp("btn_next", btn->id) == 0) {
-		if (list->internal.page_index < list->internal.count/list->internal.items_per_page-1) {
+		size_t max_page_index = list->internal.count/list->internal.items_per_page;
+		log_debug("next page: currently %zu of %zu\n", list->internal.page_index, max_page_index);
+		if (list->internal.page_index < max_page_index) {
 			++list->internal.page_index;
 		}
 		return;
@@ -255,6 +257,8 @@ void ui_clickable_list_init(struct Screen *screen,
 	list->internal.button_page_index.w = page_index_width;
 	list->internal.button_next_page.w  = page_button_width;
 	list->internal.button_page_index.is_selectable = false;
+
+	log_info("clickable list created, items_per_page: %zu\n", list->internal.items_per_page);
 }
 
 void ui_clickable_list_clear(struct Ui_Clickable_List *list)
