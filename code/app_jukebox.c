@@ -148,6 +148,7 @@ void app_jukebox_init(struct Screen *screen, const char *filepath)
 void app_jukebox_open(struct Screen *screen)
 {
 	(void) screen;
+	audio_open();
 	g_index_selected_file = -1;
 	g_player.is_playing   = false;
 }

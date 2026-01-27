@@ -10,9 +10,11 @@ struct Audio_File_Metadata {
 };
 
 Result audio_play_file(const char *filepath, struct Audio_File_Metadata *metadata);
+Result audio_play_url(const char *url);
 bool audio_is_playing(void);
 void audio_pause(void);
 void audio_resume(void);
+Result audio_open(void);
 void audio_close(void);
 int audio_get_current_pos_in_secs(void);
 void audio_set_pos(double pos_secs);

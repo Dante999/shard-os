@@ -2,10 +2,11 @@
 
 #include "ui_elements.h"
 #include "config.h"
-#include "audiostreamer.h"
+#include "audio.h"
 
 #include <linux/limits.h>
 #include <time.h>
+#include <stdio.h>
 
 #include "libcutils/util_makros.h"
 #include "libcutils/config_file.h"
@@ -32,13 +33,14 @@ static void on_radio_station_clicked(int index)
 
 	struct Radio_Station *radio = &g_radio_stations.items[index];
 	log_debug("Radiostation clicked: [%zu] %s\n", index, radio->name);
-	audiostreamer_stop(); // TODO: block until curl thread stopped
-	Result res = audiostreamer_start(radio->url);
+	audio_pause(); // TODO: block until curl thread stopped
+
+	Result res = audio_play_url(radio->url);
 
 	if (!res.success) {
 		log_error("failed to play radio station: %s", res.msg);
 	}
-	
+
 	g_player.is_playing = true;
 	g_player.track_pos_sec = 0;
 	strncpy(g_player.first_line , radio->name, sizeof(g_player.first_line));
@@ -47,8 +49,8 @@ static void on_radio_station_clicked(int index)
 static void on_mediaplayer_clicked(const char *button_id)
 {
 	if (strcmp(button_id, UI_MEDIA_PLAYER_PLAY_BUTTON_ID) == 0) {
-		if (audiostreamer_is_playing()) {
-			audiostreamer_stop();
+		if (audio_is_playing()) {
+			audio_pause();
 			g_player.is_playing = false;
 		}
 		else {
@@ -56,7 +58,7 @@ static void on_mediaplayer_clicked(const char *button_id)
 
 			if (index != -1) {
 				struct Radio_Station *radio = &g_radio_stations.items[index];
-				Result res = audiostreamer_start(radio->url);
+				Result res = audio_play_url(radio->url);
 
 				if (!res.success) {
 					log_error("failed to play radio station: %s", res.msg);
@@ -113,8 +115,6 @@ void app_radio_init(struct Screen *screen, const char *filepath)
 	g_clickable_list.on_click = on_radio_station_clicked;
 
 	ui_media_player_init(screen, &g_player, 50, y_start, 450, height, on_mediaplayer_clicked);
-
-	audiostreamer_init();
 }
 
 void app_radio_render(struct Screen *screen)
@@ -148,11 +148,12 @@ void app_radio_render(struct Screen *screen)
 
 void app_radio_close(struct Screen *screen)
 {
-	audiostreamer_stop();
+	audio_close();
 	(void) screen;
 }
 
 void app_radio_open(struct Screen *screen)
 {
+	audio_open();
 	(void) screen;
 }

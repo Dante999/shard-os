@@ -1,7 +1,7 @@
 #include "ui_main.h"
 
 #include "config.h"
-//#include "app_radio.h"
+#include "app_radio.h"
 #include "app_jukebox.h"
 #include "app_dice.h"
 #include "ui_elements.h"
@@ -27,14 +27,14 @@ struct App {
 
 int g_active_app_idx = -1;
 struct App g_apps[] = {
-//	{"Radio"  , app_radio_open  , app_radio_render  , app_radio_close},
+	{"Radio"  , app_radio_open  , app_radio_render  , app_radio_close},
 	{"Jukebox", app_jukebox_open, app_jukebox_render, app_jukebox_close},
 	{"Dice"   , app_dice_open   , app_dice_render   , app_dice_close},
 };
 
 void ui_main_init(struct Screen *screen)
 {
-	//app_radio_init(screen  , "data/radiostations.conf");
+	app_radio_init(screen  , "data/radiostations.conf");
 	app_jukebox_init(screen, "data/jukebox");
 	app_dice_init(screen);
 }
@@ -73,6 +73,8 @@ static void on_app_clicked(struct Ui_Box *box)
 	log_info("On app with id %d clicked!\n", app_index);
 
 	g_active_app_idx = app_index;
+	struct App *active_app = &g_apps[g_active_app_idx];
+	active_app->app_open(box->userdata);
 }
 
 #define APP_GRID_X_START  50
@@ -96,7 +98,8 @@ static void ui_draw_app_icons(struct Screen *screen)
 			.w  = APP_BOX_WIDTH,
 			.h  = APP_BOX_HEIGHT,
 			.on_click = on_app_clicked,
-			.is_selectable = true
+			.is_selectable = true,
+			.userdata = screen
 		};
 		snprintf(box.id, sizeof(box.id), "%zu", i);
 

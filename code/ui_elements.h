@@ -44,6 +44,7 @@ struct Ui_Box {
 	int h;
 	void (*on_click)(struct Ui_Box *box);
 	bool is_selectable;
+	void *userdata;
 };
 
 struct Ui_Window {
