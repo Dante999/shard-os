@@ -10,12 +10,11 @@
 #include "libcutils/logger.h"
 #include "libcutils/util_makros.h"
 
-#define RINGBUFFER_IMPLEMENTATION
-#include "libcutils/ringbuffer.h"
 
 #include "config.h"
 
-#define RINGBUFFER_SIZE (5 * 1024 * 1024)
+#define RINGBUFFER_SIZE (500 * 1024)
+
 
 enum Stream_Type {
 	STREAM_TYPE_NONE,
@@ -23,75 +22,96 @@ enum Stream_Type {
 	STREAM_TYPE_URL
 };
 
+
 static struct Shard_Audio {
 	SDL_AudioStream *stream;
 	enum Stream_Type  type;
 	mpg123_handle    *decode_handle;
 	bool              is_playing;
+	bool              is_format_set;
+	size_t bytes_feed;
 	struct Urlstream {
-		uint8_t  rbuffer_data[RINGBUFFER_SIZE];
-		struct Ringbuffer rbuffer;
 		bool   eof;                       /* set when curl finishes (unlikely) */
 		pthread_mutex_t lock;
 		pthread_cond_t  can_read;
 		pthread_cond_t  can_write;
 		bool quit;
-		
+
 	} stream_by_url;
 } g_audio;
 
+static void set_audio_format_if_needed(void)
+{
+	if (g_audio.is_format_set) return;
+
+	long rate;
+	int channels, enc;
+	if (mpg123_getformat(g_audio.decode_handle, &rate, &channels, &enc) == MPG123_OK) {
+		log_info("New format: %li Hz, %i channels, encoding value %i\n", rate, channels, enc);
+
+		SDL_AudioSpec src_spec;
+		SDL_GetAudioStreamFormat(g_audio.stream, &src_spec, NULL);
+		log_info("SDL format: %li Hz, %i channels, encoding value %i\n", src_spec.freq, src_spec.channels, src_spec.format);
+
+		src_spec.freq = (int)rate;
+		SDL_SetAudioStreamFormat(g_audio.stream, &src_spec, NULL);
+
+		g_audio.is_format_set = true;
+	}
+}
+
+static size_t fill_stream_from_url(uint8_t *dst, size_t bytes_wanted)
+{
+	size_t bytes_done;
+	mpg123_read(g_audio.decode_handle, dst, bytes_wanted, &bytes_done);
+
+	pthread_cond_signal(&g_audio.stream_by_url.can_write);
+	pthread_mutex_unlock(&g_audio.stream_by_url.lock);
+
+	if (bytes_done > g_audio.bytes_feed) {
+		g_audio.bytes_feed = 0;
+	}
+	else {
+		g_audio.bytes_feed -= bytes_done;
+	}
+	return bytes_done;
+}
+
 static size_t curl_buffer_write_callback(void *ptr, size_t size, size_t nmemb, void *userdata)
 {
-#if 1
-	struct Urlstream *buf = (struct Urlstream*)userdata;
-	size_t bytes_to_write = size * nmemb;
-	size_t bytes_written  = 0;
+	UNUSED(userdata);
+	struct Urlstream *buf = &g_audio.stream_by_url;
 
-	static uint8_t decode_buffer[2048];
-	while (bytes_written < bytes_to_write) {
+	const size_t bytes_total   = size * nmemb;
+	size_t       bytes_written = 0;
+
+	while (bytes_written < bytes_total) {
 		pthread_mutex_lock(&buf->lock);
 
 		if (buf->quit) {
 			log_info("write: detected quit action,!\n");
-			pthread_cond_signal(&buf->can_read);
 			pthread_mutex_unlock(&buf->lock);
 			return CURL_WRITEFUNC_ERROR;
 		}
 
-		while (ringbuffer_full(&buf->rbuffer)) {
+		size_t bytes_left = bytes_total-bytes_written;
+
+		if (g_audio.bytes_feed+bytes_left >= RINGBUFFER_SIZE) {
 			log_debug("write: buffer full, waiting...\n");
 			pthread_cond_wait(&buf->can_write, &buf->lock);
 		}
 
-		const size_t bytes_free = ringbuffer_bytes_free(&buf->rbuffer);
-		
-		size_t chunk_size = MIN((bytes_to_write - bytes_written), bytes_free);
-		chunk_size        = MIN(chunk_size, sizeof(decode_buffer));
-
-		size_t bytes_decoded = 0;
-
-		int decode_err = mpg123_decode( 
-				g_audio.decode_handle,
-				(unsigned char *) ptr, bytes_to_write, 
-				decode_buffer, chunk_size, &bytes_decoded);
-
-		if (decode_err != MPG123_OK) {
-			log_error("error while decoding from url: %s\n", mpg123_plain_strerror(decode_err));
-		}
-
-
-		//size_t chunk_size       = bytes_to_write - bytes_written;
-		//if (chunk_size > bytes_free) chunk_size = bytes_free;
-
-		log_debug("write: writing %zu bytes (%zu bytes filled)\n", chunk_size, ringbuffer_bytes_used(&buf->rbuffer));
-		ringbuffer_write(&buf->rbuffer, decode_buffer, bytes_decoded);
-		bytes_written += bytes_decoded;
-
+		mpg123_feed(
+			g_audio.decode_handle,
+			(uint8_t*)ptr+bytes_written,
+			bytes_left);
+		g_audio.bytes_feed += bytes_left;
+		log_debug("write: bytes feed total: %zu\n", g_audio.bytes_feed);
+		bytes_written += bytes_left;
 		pthread_cond_signal(&buf->can_read);
 		pthread_mutex_unlock(&buf->lock);
 	}
-	return bytes_to_write;
-#endif
+	return bytes_written;
 }
 
 static void *curl_thread(void *arg)
@@ -112,11 +132,14 @@ static void *curl_thread(void *arg)
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 0L);          /* no timeout for live stream */
 
 	log_info("start streaming from %s\n", url);
+
+
 	CURLcode res = curl_easy_perform(curl);
 	if (res != CURLE_OK) {
 		log_error("curl error: %s\n", curl_easy_strerror(res));
 	}
 
+	//SDL_Delay(200);
 	log_debug("CURL END!\n");
 	pthread_mutex_lock(&g_audio.stream_by_url.lock);
 	g_audio.stream_by_url.eof = true;
@@ -128,43 +151,7 @@ static void *curl_thread(void *arg)
 	return NULL;
 }
 
-static size_t fill_stream_from_url(uint8_t *dst, size_t bytes_wanted)
-{
-#if 1
-	struct Urlstream *buf = &g_audio.stream_by_url;
-	size_t want = bytes_wanted;
-	size_t got  = 0;
 
-	while (got < bytes_wanted) {
-		pthread_mutex_lock(&buf->lock);
-
-		while (ringbuffer_empty(&buf->rbuffer) && !buf->eof) {
-			log_warning("read: buffer empty, waiting...\n");
-			pthread_cond_wait(&buf->can_read, &buf->lock);
-		}
-
-		if (ringbuffer_empty(&buf->rbuffer) && buf->eof) {   /* nothing left */
-			pthread_mutex_unlock(&buf->lock);
-			break;
-		}
-
-		size_t avail = ringbuffer_bytes_used(&buf->rbuffer);
-		size_t chunk = want - got;
-		if (chunk > avail) chunk = avail;
-
-		ringbuffer_read(&buf->rbuffer, dst, chunk);
-		got += chunk;
-
-		pthread_cond_signal(&buf->can_write);
-		pthread_mutex_unlock(&buf->lock);
-	}
-
-	if (got > 0) {
-		log_debug("read %zu byte(s), requested %zu\n", got, bytes_wanted);
-	}
-	return got;
-#endif
-}
 
 static size_t fill_stream_from_file(uint8_t *dst, size_t bytes_wanted)
 {
@@ -202,7 +189,8 @@ static void fill_stream_callback(void *userdata, SDL_AudioStream *stream, int ad
 			bytes_decoded = fill_stream_from_url(buffer, bytes_wanted);
 	}
 
-	 if (!SDL_PutAudioStreamData(g_audio.stream, buffer, (int)bytes_decoded)) {
+	set_audio_format_if_needed();
+	if (!SDL_PutAudioStreamData(g_audio.stream, buffer, (int)bytes_decoded)) {
 		log_error("failed to put audio stream data: %s\n", SDL_GetError());
 		return;
 	}
@@ -239,15 +227,20 @@ static SDL_AudioDeviceID get_audio_device_or_default(const char *device_name)
 }
 
 
-Result audio_play_url(const char *url)
+static void init_play_audio(void)
 {
-
 	PRECONDITION(g_audio.stream != NULL);
 	PRECONDITION(g_audio.decode_handle != NULL);
 
+	g_audio.bytes_feed = 0;
 	g_audio.stream_by_url.quit         = false;
 	g_audio.stream_by_url.eof          = false;
-	ringbuffer_reset(&g_audio.stream_by_url.rbuffer);
+	g_audio.is_format_set = false;
+}
+
+Result audio_play_url(const char *url)
+{
+	init_play_audio();
 	/* start curl thread */
 	pthread_t th;
 	if (pthread_create(&th, NULL, curl_thread, (void*)url) != 0) {
@@ -255,10 +248,10 @@ Result audio_play_url(const char *url)
 	}
 	pthread_detach(th);   /* we don't need to join later */
 
-	SDL_Delay(2000);
+	//SDL_Delay(2000);
 
 	if (mpg123_open_feed(g_audio.decode_handle) != MPG123_OK) {
-		return result_make(false, "failed to open feed: %s", 
+		return result_make(false, "failed to open feed: %s",
 			mpg123_strerror(g_audio.decode_handle));
 	}
 
@@ -270,13 +263,12 @@ Result audio_play_url(const char *url)
 
 Result audio_play_file(const char *filepath, struct Audio_File_Metadata *metadata)
 {
+	init_play_audio();
+
 	UNUSED(metadata);
 
-	PRECONDITION(g_audio.stream != NULL);
-	PRECONDITION(g_audio.decode_handle != NULL);
-
 	if (mpg123_open(g_audio.decode_handle, filepath) != MPG123_OK) {
-		return result_make(false, "failed to open file %s: %s", 
+		return result_make(false, "failed to open file %s: %s",
 			filepath, mpg123_strerror(g_audio.decode_handle));
 	}
 
@@ -305,7 +297,6 @@ Result audio_open(void)
 	}
 
 	memset(&g_audio.stream_by_url, 0, sizeof(g_audio.stream_by_url));
-	ringbuffer_init(&g_audio.stream_by_url.rbuffer, g_audio.stream_by_url.rbuffer_data, sizeof(g_audio.stream_by_url.rbuffer_data));
 	pthread_mutex_init(&g_audio.stream_by_url.lock, NULL);
 	pthread_cond_init(&g_audio.stream_by_url.can_read, NULL);
 	pthread_cond_init(&g_audio.stream_by_url.can_write, NULL);
@@ -330,6 +321,7 @@ void audio_close(void)
 
 	if (g_audio.type == STREAM_TYPE_URL) {
 		g_audio.stream_by_url.quit = true;
+		pthread_cond_signal(&g_audio.stream_by_url.can_write);
 	}
 
 	g_audio.is_playing = false;

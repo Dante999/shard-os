@@ -9,8 +9,6 @@ shard_os_sources = [
   'main.c',
   'screen.c',
   'filebrowser.c',
-  'audioplayer.c',
-  #  'audiostreamer.c',
   'ui_elements.c',
   'ui_main.c',
   'app_jukebox.c',
