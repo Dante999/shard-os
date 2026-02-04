@@ -232,6 +232,7 @@ static void init_play_audio(void)
 	PRECONDITION(g_audio.stream != NULL);
 	PRECONDITION(g_audio.decode_handle != NULL);
 
+	mpg123_close(g_audio.decode_handle);
 	g_audio.bytes_feed = 0;
 	g_audio.stream_by_url.quit         = false;
 	g_audio.stream_by_url.eof          = false;

@@ -16,6 +16,7 @@ struct Config {
 	int screen_font_size_m;
 	int screen_font_size_s;
 	int screen_font_size_xs;
+	bool screen_hide_cursor;
 
 	char resources_dir[255];
 	char font_file[255];

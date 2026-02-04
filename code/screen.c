@@ -472,7 +472,9 @@ Result screen_init(struct Screen *screen, int width, int height)
 
 	// Set the window to fullscreen
 	//SDL_SetWindowFullscreen(screen->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-
+	if (g_config.screen_hide_cursor) {
+		SDL_HideCursor();
+	}
 
 
 	// Create renderer
