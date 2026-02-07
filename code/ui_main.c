@@ -17,6 +17,7 @@
 #define UI_STATUS_BAR_TEXT_Y_START     20
 #define UI_STATUS_BAR_DATETIME_X_START 840
 #define UI_WINDOW_BORDER               20
+#define UI_SLEEP_BUTTON_X              600
 
 struct App {
 	const char *name;
@@ -31,12 +32,32 @@ struct App g_apps[] = {
 	{"Jukebox", app_jukebox_open, app_jukebox_render, app_jukebox_close},
 	{"Dice"   , app_dice_open   , app_dice_render   , app_dice_close},
 };
+bool g_is_sleeping = false;
+struct Ui_Button g_sleep_button = {0};
+
+void on_sleep_button(struct Ui_Button *btn)
+{
+	UNUSED(btn);
+	g_is_sleeping = true;
+}
 
 void ui_main_init(struct Screen *screen)
 {
 	app_radio_init(screen  , "data/radiostations.conf");
 	app_jukebox_init(screen, "data/jukebox");
 	app_dice_init(screen);
+
+	ui_button_init(
+		screen,
+		&g_sleep_button,
+		"sleep",
+		UI_SLEEP_BUTTON_X,
+		UI_STATUS_BAR_TEXT_Y_START,
+		"[Sleep]",
+		on_sleep_button);
+
+	g_sleep_button.border = UI_BORDER_NONE;
+
 }
 
 
@@ -57,6 +78,8 @@ static void ui_main_draw_header(struct Screen *screen)
 	time_t now = time(NULL);
 	struct tm *tm = localtime(&now);           /* use gmtime(&now) for UTC */
 	char buf[32];
+
+	ui_button_render(screen, &g_sleep_button);
 
 	strftime(buf, sizeof buf, "%d.%m.%Y", tm);
 	screen_draw_text(screen, UI_STATUS_BAR_DATETIME_X_START, UI_STATUS_BAR_TEXT_Y_START, g_config.screen_font_size_m, buf);
@@ -148,6 +171,11 @@ static void ui_draw_app_icons(struct Screen *screen)
 
 void ui_main_render(struct Screen *screen)
 {
+	if (g_is_sleeping) {
+		if(screen->mouse_clicked) g_is_sleeping = false;
+		return;
+	}
+
 	ui_main_draw_header(screen);
 
 	if (g_active_app_idx == -1) {
