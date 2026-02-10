@@ -397,6 +397,7 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 	screen_draw_box(screen, player->x, player->y, player->w, player->h, false);
 	const int font_size_first_line  = g_config.screen_font_size_m;
 	const int font_size_second_line = g_config.screen_font_size_s;
+	const int font_size_last_line   = g_config.screen_font_size_xs;
 
 	screen_draw_text(screen,
 			player->x + 40,
@@ -409,6 +410,12 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 			player->y + 30 + font_size_first_line + 10,
 			font_size_second_line,
 			player->second_line);
+
+	screen_draw_text(screen,
+			player->x + 40,
+			player->y + 30 + font_size_first_line + font_size_second_line + 100,
+			font_size_last_line,
+			player->last_line);
 
 	if (player->is_playing) {
 		strncpy(player->internal.button_play.text, "Stop", sizeof(player->internal.button_play.text));

@@ -85,6 +85,7 @@ struct Ui_Media_Player {
 	int h;
 	char first_line[40];
 	char second_line[40];
+	char last_line[40];
 	int track_pos_sec;
 	int track_len_sec;
 	bool is_playing;

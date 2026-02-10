@@ -11,6 +11,8 @@ struct Audio_File_Metadata {
 
 Result audio_play_file(const char *filepath, struct Audio_File_Metadata *metadata);
 Result audio_play_url(const char *url);
+int audio_get_buffered_bytes(void);
+int audio_get_buffered_percent(void);
 bool audio_is_playing(void);
 void audio_pause(void);
 void audio_resume(void);

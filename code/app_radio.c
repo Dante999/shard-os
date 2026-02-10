@@ -130,6 +130,13 @@ void app_radio_render(struct Screen *screen)
 			frame_count = 0;
 		}
 	}
+
+	snprintf(
+		g_player.last_line,
+		sizeof(g_player.last_line),
+		"Buffered: %d Bytes",
+		audio_get_buffered_bytes());
+
 	//static time_t timestamp_last = 0;
 
 	//if (g_player.is_playing) {
