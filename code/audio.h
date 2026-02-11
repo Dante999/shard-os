@@ -20,5 +20,7 @@ Result audio_open(void);
 void audio_close(void);
 int audio_get_current_pos_in_secs(void);
 void audio_set_pos(double pos_secs);
+float audio_get_gain(void);
+void audio_set_gain(float gain);
 
 #endif // AUDIO_H

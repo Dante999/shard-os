@@ -134,8 +134,8 @@ void app_radio_render(struct Screen *screen)
 	snprintf(
 		g_player.last_line,
 		sizeof(g_player.last_line),
-		"Buffered: %d Bytes",
-		audio_get_buffered_bytes());
+		"Buffered: %d kB",
+		audio_get_buffered_bytes()/1024);
 
 	//static time_t timestamp_last = 0;
 

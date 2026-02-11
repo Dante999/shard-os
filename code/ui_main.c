@@ -5,6 +5,7 @@
 #include "app_jukebox.h"
 #include "app_dice.h"
 #include "ui_elements.h"
+#include "audio.h"
 
 #include "libcutils/logger.h"
 #include "libcutils/util_makros.h"
@@ -17,7 +18,7 @@
 #define UI_STATUS_BAR_TEXT_Y_START     20
 #define UI_STATUS_BAR_DATETIME_X_START 840
 #define UI_WINDOW_BORDER               20
-#define UI_SLEEP_BUTTON_X              600
+#define UI_STATUS_BAR_X_START_RIGHT    300
 
 struct App {
 	const char *name;
@@ -32,14 +33,45 @@ struct App g_apps[] = {
 	{"Jukebox", app_jukebox_open, app_jukebox_render, app_jukebox_close},
 	{"Dice"   , app_dice_open   , app_dice_render   , app_dice_close},
 };
-bool g_is_sleeping = false;
-struct Ui_Button g_sleep_button = {0};
 
-void on_sleep_button(struct Ui_Button *btn)
+
+bool g_is_sleeping = false;
+//struct Ui_Button g_sleep_button = {0};
+
+void on_sleep_icon_clicked(void)
 {
-	UNUSED(btn);
 	g_is_sleeping = true;
 }
+
+#define VOLUME_STEP 0.1f
+void on_volume_down_clicked(void)
+{
+	float vol = audio_get_gain();
+	if (vol >= VOLUME_STEP) {
+		log_info("vol-: %f\n", (double)vol);
+		audio_set_gain(vol-0.1f);
+	}
+}
+
+void on_volume_up_clicked(void)
+{
+	float vol = audio_get_gain();
+	if (vol <= 1.0f-VOLUME_STEP) {
+		log_info("vol+: %f\n", (double)vol);
+		audio_set_gain(vol+0.1f);
+	}
+}
+
+struct Icon {
+	const char *name;
+	void (*on_click)(void);
+};
+
+struct Icon g_icons[] = {
+	{"[SLEEP]", on_sleep_icon_clicked},
+	{"[VOL-]", on_volume_down_clicked},
+	{"[VOL+]", on_volume_up_clicked}
+};
 
 void ui_main_init(struct Screen *screen)
 {
@@ -47,19 +79,37 @@ void ui_main_init(struct Screen *screen)
 	app_jukebox_init(screen, "data/jukebox");
 	app_dice_init(screen);
 
-	ui_button_init(
-		screen,
-		&g_sleep_button,
-		"sleep",
-		UI_SLEEP_BUTTON_X,
-		UI_STATUS_BAR_TEXT_Y_START,
-		"[Sleep]",
-		on_sleep_button);
-
-	g_sleep_button.border = UI_BORDER_NONE;
 
 }
 
+static void on_icon_clicked(struct Ui_Button *btn)
+{
+	//(*on_click)(void) cb = (void (*)(void))btn->user_data;
+	void (*to_func)(void) = (void (*)(void))(intptr_t)btn->user_data;
+	to_func();
+}
+
+static void ui_main_draw_header_icons(struct Screen *screen, int x_left, int y_top, int height)
+{
+	struct Ui_Button button = {0};
+	for (size_t i=0; i < ARRAY_SIZE(g_icons); ++i) {
+		struct Icon *icon = &g_icons[i];
+		ui_button_init(
+				screen,
+				&button,
+				icon->name,
+				x_left,
+				y_top,
+				icon->name,
+				on_icon_clicked);
+
+		button.border = UI_BORDER_NONE;
+		button.user_data = icon->on_click;
+
+		ui_button_render(screen, &button);
+		x_left += button.w + 10;
+	}
+}
 
 static void ui_main_draw_header(struct Screen *screen)
 {
@@ -79,7 +129,7 @@ static void ui_main_draw_header(struct Screen *screen)
 	struct tm *tm = localtime(&now);           /* use gmtime(&now) for UTC */
 	char buf[32];
 
-	ui_button_render(screen, &g_sleep_button);
+	ui_main_draw_header_icons(screen, UI_STATUS_BAR_X_START_RIGHT, UI_STATUS_BAR_TEXT_Y_START+10, UI_STATUS_BAR_HEIGHT);
 
 	strftime(buf, sizeof buf, "%d.%m.%Y", tm);
 	screen_draw_text(screen, UI_STATUS_BAR_DATETIME_X_START, UI_STATUS_BAR_TEXT_Y_START, g_config.screen_font_size_m, buf);

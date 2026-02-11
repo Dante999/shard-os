@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include <SDL3/SDL.h>
+#include <SDL3_image/SDL_image.h>
 #include "libcutils/logger.h"
 #include "libcutils/util_makros.h"
 
@@ -140,7 +141,36 @@ void screen_draw_icon(struct Screen *screen, int x, int y, int width, int height
 	(void) width;
 	(void) height;
 	(void) name;
-#if 0
+#if 1
+	//char full_path[2048];
+	//snprintf(full_path, sizeof(full_path), "%s/%s", g_config.resources_dir, name);
+	SDL_Surface *svg_surface = IMG_Load(name);
+
+	if (!svg_surface) {
+		fprintf(stderr, "IMG_LoadSVG error: %s\n", SDL_GetError());
+		return;
+	}
+
+	SDL_Texture *svg_tex = SDL_CreateTextureFromSurface(screen->renderer, svg_surface);
+	SDL_DestroySurface(svg_surface);
+	if (!svg_tex) {
+		SDL_DestroySurface(svg_surface);
+		fprintf(stderr, "SDL_CreateTextureFromSurface error: %s\n", SDL_GetError());
+	}
+	screen_set_color(screen, SCREEN_COLOR_PRIMARY);
+	SDL_SetTextureBlendMode(svg_tex, SDL_BLENDMODE_BLEND);
+	SDL_SetTextureColorMod(svg_tex, 0xFF, 0xD4, 0x00);
+	//SDL_SetTextureColorMod(svg_tex, 0xFF, 0x00, 0x00);
+	SDL_FRect text_rect = {
+		.x = (float)x,
+		.y = (float)y,
+		.w = (float)width,
+		.h = (float)height
+	};
+	SDL_RenderTexture(screen->renderer, svg_tex, NULL, &text_rect);
+	SDL_DestroyTexture(svg_tex);
+
+#else
 	SDL_Surface *tmp_surface = IMG_Load(name);
 	if (tmp_surface == NULL) {
 		printf("ERROR: unable to load %s!\n", name);
