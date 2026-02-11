@@ -114,6 +114,7 @@ void ui_button_init_icon(
 	btn->w        = w;
 	btn->h        = UI_BUTTON_FONT_SIZE+2*UI_BUTTON_BORDER_WIDTH;
 	btn->border   = UI_BORDER_NORMAL;
+	btn->type     = BUTTON_TYPE_ICON;
 	btn->on_click = on_click;
 	btn->is_selectable = true;
 }
@@ -135,6 +136,7 @@ void ui_button_init(
 	btn->w        = text_dimensions.w+2*UI_BUTTON_BORDER_WIDTH;
 	btn->h        = text_dimensions.h+2*UI_BUTTON_BORDER_WIDTH;
 	btn->border   = UI_BORDER_NORMAL;
+	btn->type     = BUTTON_TYPE_TEXT;
 	btn->on_click = on_click;
 	btn->is_selectable = true;
 }
