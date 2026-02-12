@@ -49,18 +49,21 @@ static struct Shard_Audio {
 	SDL_AudioStream *stream;
 	enum Stream_Type  type;
 	mpg123_handle    *decode_handle;
-	bool              is_playing;
+	enum Play_Status play_status;
 	bool              is_format_set;
 	size_t bytes_feed;
 	float gain;
+	struct Track_Info {
+		long rate_hz;
+		int channels;
+		int encoding;
+	} track_info;
 	struct Static_Buffer download_buffer;
 	struct Urlstream {
 		pthread_t download_thread;
 		bool thread_running;
 		bool   eof;                       /* set when curl finishes (unlikely) */
 		pthread_mutex_t lock;
-		//pthread_cond_t  can_read;
-		//pthread_cond_t  can_write;
 		bool quit;
 
 	} stream_by_url;
@@ -70,25 +73,79 @@ static void set_audio_format_if_needed(void)
 {
 	if (g_audio.is_format_set) return;
 
-	long rate;
-	int channels, enc;
-	if (mpg123_getformat(g_audio.decode_handle, &rate, &channels, &enc) == MPG123_OK) {
-		log_info("New format: %li Hz, %i channels, encoding value %i\n", rate, channels, enc);
+	int error = mpg123_getformat(
+		g_audio.decode_handle, &g_audio.track_info.rate_hz,
+		&g_audio.track_info.channels, &g_audio.track_info.encoding);
+
+	if ( error == MPG123_OK) {
+		log_info("New format: %li Hz, %i channels, encoding value %i\n", 
+			g_audio.track_info.rate_hz,
+			g_audio.track_info.channels,
+			g_audio.track_info.encoding);
 
 		SDL_AudioSpec src_spec;
 		SDL_GetAudioStreamFormat(g_audio.stream, &src_spec, NULL);
-		log_info("SDL format: %li Hz, %i channels, encoding value %i\n", src_spec.freq, src_spec.channels, src_spec.format);
+		log_info("SDL format: %li Hz, %i channels, encoding value %i\n",
+			src_spec.freq, src_spec.channels, src_spec.format);
 
-		src_spec.freq = (int)rate;
+		src_spec.freq = (int)g_audio.track_info.rate_hz;
 		SDL_SetAudioStreamFormat(g_audio.stream, &src_spec, NULL);
 
 		g_audio.is_format_set = true;
 	}
 }
 
+static void copy_mpg123_string(char *dst, mpg123_string *src ,size_t dst_size)
+{
+    if(!dst || dst_size == 0) return;
+    dst[0] = '\0';
+    if(!src || !src->p || src->fill == 0) return;
+    /* copy at most dst_size-1 bytes */
+    size_t n = src->fill;
+    if(n > dst_size - 1) n = dst_size - 1;
+    memcpy(dst, src->p, n);
+    dst[n] = '\0';
+}
+
+static Result get_metadata_from_stream(struct Audio_File_Metadata *metadata)
+{
+	int error = mpg123_scan(g_audio.decode_handle);
+	if (error != MPG123_OK) {
+		return result_make(false, "failed to scan file %s: %s",
+				mpg123_strerror(g_audio.decode_handle));
+	}
+	set_audio_format_if_needed();
+	assert(g_audio.track_info.rate_hz != 0);
+
+	off_t samples = mpg123_length(g_audio.decode_handle);
+	metadata->length_secs = (double) samples / (double)g_audio.track_info.rate_hz;
+
+	mpg123_id3v1 *v1;
+	mpg123_id3v2 *v2;
+
+	error = mpg123_id3(g_audio.decode_handle, &v1, &v2);
+	if (error != MPG123_OK) {
+		return result_make(
+			false, 
+			"failed to get id3 tags: %s",
+			mpg123_plain_strerror(error));
+	}
+	if (v1 != NULL) {
+		strncpy(metadata->artist, v1->artist, sizeof(metadata->artist));
+		strncpy(metadata->title, v1->title, sizeof(metadata->title));
+		return result_make_success();
+	}
+	if (v2 != NULL) {
+		copy_mpg123_string(metadata->artist, v2->artist, sizeof(metadata->artist));
+		copy_mpg123_string(metadata->title, v2->title, sizeof(metadata->title));
+		return result_make_success();
+	}
+
+	return result_make(false, "no id3 tags contained!");
+}
+
 static size_t fill_stream_from_url(uint8_t *dst, size_t bytes_wanted)
 {
-#ifdef USE_DOUBLE_BUFFER
 	static struct Static_Buffer tmp_buffer = {0};
 
 	if (audio_get_buffered_bytes() < MAX_FEED_CAPACITY) {
@@ -105,22 +162,6 @@ static size_t fill_stream_from_url(uint8_t *dst, size_t bytes_wanted)
 	}
 	size_t bytes_done;
 	mpg123_read(g_audio.decode_handle, dst, bytes_wanted, &bytes_done);
-	//log_info("read: wanted: %zu, done: %zu, feed: %zu\n", bytes_wanted, bytes_done, g_audio.bytes_feed);
-	if (bytes_done > g_audio.bytes_feed) {
-		g_audio.bytes_feed = 0;
-	}
-	else {
-		g_audio.bytes_feed -= bytes_done;
-	}
-	return bytes_done;
-#else
-	size_t bytes_done;
-
-	pthread_mutex_lock(&g_audio.stream_by_url.lock);
-	mpg123_read(g_audio.decode_handle, dst, bytes_wanted, &bytes_done);
-
-	//pthread_cond_signal(&g_audio.stream_by_url.can_write);
-	pthread_mutex_unlock(&g_audio.stream_by_url.lock);
 
 	if (bytes_done > g_audio.bytes_feed) {
 		g_audio.bytes_feed = 0;
@@ -129,7 +170,6 @@ static size_t fill_stream_from_url(uint8_t *dst, size_t bytes_wanted)
 		g_audio.bytes_feed -= bytes_done;
 	}
 	return bytes_done;
-#endif
 }
 
 static size_t curl_buffer_write_callback(void *ptr, size_t size, size_t nmemb, void *userdata)
@@ -155,7 +195,6 @@ static size_t curl_buffer_write_callback(void *ptr, size_t size, size_t nmemb, v
 		}
 
 		size_t bytes_left = bytes_total-bytes_written;
-#ifdef USE_DOUBLE_BUFFER
 
 		size_t tmp = static_buffer_append(
 			&g_audio.download_buffer,
@@ -163,7 +202,7 @@ static size_t curl_buffer_write_callback(void *ptr, size_t size, size_t nmemb, v
 			bytes_left);
 
 		bytes_written += tmp;
-		log_debug("write: buffered %zu bytes (%zu total)\n", tmp, g_audio.download_buffer.used);
+
 		if (tmp < bytes_left) {
 			log_debug("write: buffer full, waiting...\n");
 			pthread_mutex_unlock(&buf->lock);
@@ -171,30 +210,6 @@ static size_t curl_buffer_write_callback(void *ptr, size_t size, size_t nmemb, v
 			continue;
 		}
 
-		pthread_mutex_unlock(&buf->lock);
-
-#else
-		if (g_audio.bytes_feed+bytes_left >= RINGBUFFER_SIZE) {
-			log_debug("write: buffer full, waiting...\n");
-			pthread_mutex_unlock(&buf->lock);
-			sleep(1);
-			continue;
-			//pthread_cond_wait(&buf->can_write, &buf->lock);
-		}
-
-		/*
-		 * safe in ringbuffer and decode when needed to download as fast
-		 * as possible?
-		 */
-		mpg123_feed(
-			g_audio.decode_handle,
-			(uint8_t*)ptr+bytes_written,
-			bytes_left);
-		g_audio.bytes_feed += bytes_left;
-		//log_debug("write: bytes feed total: %zu\n", g_audio.bytes_feed);
-		bytes_written += bytes_left;
-		//pthread_cond_signal(&buf->can_read);
-#endif
 		pthread_mutex_unlock(&buf->lock);
 	}
 	return bytes_written;
@@ -225,11 +240,9 @@ static void *curl_thread(void *arg)
 		log_error("curl error: %s\n", curl_easy_strerror(res));
 	}
 
-	//SDL_Delay(200);
 	log_debug("CURL END!\n");
 	pthread_mutex_lock(&g_audio.stream_by_url.lock);
 	g_audio.stream_by_url.eof = true;
-	//pthread_cond_signal(&g_audio.stream_by_url.can_read);
 	pthread_mutex_unlock(&g_audio.stream_by_url.lock);
 
 	curl_easy_cleanup(curl);
@@ -245,8 +258,8 @@ static size_t fill_stream_from_file(uint8_t *dst, size_t bytes_wanted)
 	int merror = mpg123_read(g_audio.decode_handle, dst, bytes_wanted, &bytes_decoded);
 
 	if (merror == MPG123_DONE) {
-		// TODO: play next track
 		audio_pause();
+		g_audio.play_status = PLAY_STATUS_FINISHED;
 	}
 	else if (merror != MPG123_OK) {
 		log_error("failed to decode audio file: %s\n", mpg123_plain_strerror(merror));
@@ -345,12 +358,10 @@ static void init_play_audio(void)
 Result audio_play_url(const char *url)
 {
 	init_play_audio();
-	/* start curl thread */
-	//pthread_t th;
+
 	if (pthread_create(&g_audio.stream_by_url.download_thread, NULL, curl_thread, (void*)url) != 0) {
 		return result_make(false, "Failed to start curl thread\n");
 	}
-	//pthread_detach(th);   /* we don't need to join later */
 
 	SDL_Delay(1000);
 
@@ -360,7 +371,7 @@ Result audio_play_url(const char *url)
 	}
 
 	g_audio.type = STREAM_TYPE_URL;
-	SDL_ResumeAudioStreamDevice(g_audio.stream);
+	audio_resume();	
 
 	return result_make_success();
 }
@@ -376,8 +387,14 @@ Result audio_play_file(const char *filepath, struct Audio_File_Metadata *metadat
 			filepath, mpg123_strerror(g_audio.decode_handle));
 	}
 
+	Result res = get_metadata_from_stream(metadata);
+
+	if (res.success) {
+		log_error("failed to get metadata: %s\n", res.msg);
+	}
+
 	g_audio.type = STREAM_TYPE_FILE;
-	SDL_ResumeAudioStreamDevice(g_audio.stream);
+	audio_resume();
 
 	return result_make_success();
 }
@@ -404,8 +421,6 @@ Result audio_open(void)
 
 	memset(&g_audio.stream_by_url, 0, sizeof(g_audio.stream_by_url));
 	pthread_mutex_init(&g_audio.stream_by_url.lock, NULL);
-	//pthread_cond_init(&g_audio.stream_by_url.can_read, NULL);
-	//pthread_cond_init(&g_audio.stream_by_url.can_write, NULL);
 
 	return result_make_success();
 }
@@ -427,42 +442,53 @@ void audio_close(void)
 
 	if (g_audio.type == STREAM_TYPE_URL) {
 		g_audio.stream_by_url.quit = true;
-		//pthread_cond_signal(&g_audio.stream_by_url.can_write);
 	}
 
-	g_audio.is_playing = false;
-	g_audio.type = STREAM_TYPE_NONE;
+	g_audio.play_status = PLAY_STATUS_STOPPED;
+	g_audio.type        = STREAM_TYPE_NONE;
 
 	pthread_mutex_destroy(&g_audio.stream_by_url.lock);
-	//pthread_cond_destroy(&g_audio.stream_by_url.can_read);
-	//pthread_cond_destroy(&g_audio.stream_by_url.can_write);
+}
+
+enum Play_Status audio_get_play_status(void)
+{
+	return g_audio.play_status;
 }
 
 bool audio_is_playing(void)
 {
-	return !SDL_AudioStreamDevicePaused(g_audio.stream);
+	//return !SDL_AudioStreamDevicePaused(g_audio.stream);
+	return g_audio.play_status == PLAY_STATUS_PLAYING;
 }
 void audio_pause(void)
 {
-	SDL_PauseAudioStreamDevice(g_audio.stream);
-	g_audio.is_playing = false;
+	if (SDL_PauseAudioStreamDevice(g_audio.stream)) {
+		g_audio.play_status = PLAY_STATUS_PAUSED;
+	}
 }
 
 void audio_resume(void)
 {
-	SDL_ResumeAudioStreamDevice(g_audio.stream);
-	g_audio.is_playing = true;
+	if (SDL_ResumeAudioStreamDevice(g_audio.stream)) {
+		g_audio.play_status = PLAY_STATUS_PLAYING;
+	}
 }
 
 int audio_get_current_pos_in_secs(void)
 {
-	return 10;
+	if (g_audio.is_format_set) {
+		return (int) (mpg123_tell(g_audio.decode_handle) / g_audio.track_info.rate_hz);
+	}
+
+	return 0;
 }
 
-void audio_set_pos(double pos_secs)
+void audio_set_pos(int pos_secs)
 {
-	// TODO: implementation
-	(void) pos_secs;
+	if (pos_secs < 0) pos_secs = 0;
+
+	off_t new_offset = pos_secs * g_audio.track_info.rate_hz;
+	mpg123_seek(g_audio.decode_handle, new_offset, SEEK_SET);
 }
 
 int audio_get_buffered_bytes(void) {

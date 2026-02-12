@@ -103,11 +103,11 @@ static void ui_main_draw_header_icons(struct Screen *screen, int x_left, int y_t
 				icon->name,
 				on_icon_clicked);
 
-		button.border = UI_BORDER_NONE;
+		button.outline.border = UI_BORDER_NONE;
 		button.user_data = icon->on_click;
 
 		ui_button_render(screen, &button);
-		x_left += button.w + 10;
+		x_left += button.outline.w + 10;
 	}
 }
 
@@ -166,10 +166,10 @@ static void ui_draw_app_icons(struct Screen *screen)
 
 
 		struct Ui_Box box = {
-			.x  = x,
-			.y  = y,
-			.w  = APP_BOX_WIDTH,
-			.h  = APP_BOX_HEIGHT,
+			.outline.x  = x,
+			.outline.y  = y,
+			.outline.w  = APP_BOX_WIDTH,
+			.outline.h  = APP_BOX_HEIGHT,
 			.on_click = on_app_clicked,
 			.is_selectable = true,
 			.userdata = screen

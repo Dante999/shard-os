@@ -43,10 +43,10 @@ void app_dice_init(struct Screen *screen)
 {
 	(void) screen;
 
-	g_roll_dice_box.x = 300;
-	g_roll_dice_box.y = 200;
-	g_roll_dice_box.w = 300;
-	g_roll_dice_box.h = 300;
+	g_roll_dice_box.outline.x = 300;
+	g_roll_dice_box.outline.y = 200;
+	g_roll_dice_box.outline.w = 300;
+	g_roll_dice_box.outline.h = 300;
 	g_roll_dice_box.is_selectable = true;
 	g_roll_dice_box.on_click = on_click_roll_dices;
 
@@ -70,8 +70,8 @@ void app_dice_render(struct Screen *screen)
 		font_size,
 		g_roll_result);
 
-	const int x_center = g_roll_dice_box.x+(g_roll_dice_box.w/2);
-	const int y_center = g_roll_dice_box.y+(g_roll_dice_box.h/2);
+	const int x_center = g_roll_dice_box.outline.x+(g_roll_dice_box.outline.w/2);
+	const int y_center = g_roll_dice_box.outline.y+(g_roll_dice_box.outline.h/2);
 	screen_draw_text(screen, x_center-(dim.w/2), y_center-(font_size/2), font_size, g_roll_result);
 
 }

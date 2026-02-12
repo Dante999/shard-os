@@ -52,6 +52,38 @@ static void refresh_clickable_list(void)
 	}
 }
 
+static void play_previous_track(void)
+{
+	if (g_index_selected_file <= 0) return;
+
+	int tmp_index = g_index_selected_file-1;
+	while (tmp_index > 0) {
+		struct Node *node = &g_filebrowser.nodes[tmp_index];
+		if (node->type == NODE_TYPE_FILE) {
+			jukebox_play_file(node, tmp_index);
+			g_index_selected_file = tmp_index;
+			break;
+		}
+		tmp_index--;
+	}
+}
+
+static void play_next_track(void)
+{
+	const int max_index = (int)g_clickable_list.internal.count-1;
+	if (g_index_selected_file >= max_index) return;
+
+	int tmp_index = g_index_selected_file+1;
+	while (tmp_index <= max_index) {
+		struct Node *node = &g_filebrowser.nodes[tmp_index];
+		if (node->type == NODE_TYPE_FILE) {
+			jukebox_play_file(node, tmp_index);
+			g_index_selected_file = tmp_index;
+			break;
+		}
+		tmp_index++;
+	}
+}
 static void on_media_player_clicked(const char *button_id)
 {
 	log_debug("mediaplayer button clicked: %s\n", button_id);
@@ -71,43 +103,20 @@ static void on_media_player_clicked(const char *button_id)
 	else if (strcmp(button_id, "rewind_button") == 0) {
 		if (g_player.track_pos_sec > 10) {
 			g_player.track_pos_sec -= 10;
-			audio_set_pos((double) g_player.track_pos_sec);
+			audio_set_pos(g_player.track_pos_sec);
 		}
 	}
 	else if (strcmp(button_id, "forward_button") == 0) {
 		if (g_player.track_pos_sec < g_player.track_len_sec-10) {
 			g_player.track_pos_sec += 10;
-			audio_set_pos((double) g_player.track_pos_sec);
+			audio_set_pos(g_player.track_pos_sec);
 		}
 	}
 	else if (strcmp(button_id, "prev_button") == 0) {
-		if (g_index_selected_file <= 0) return;
-
-		int tmp_index = g_index_selected_file-1;
-		while (tmp_index > 0) {
-			struct Node *node = &g_filebrowser.nodes[tmp_index];
-			if (node->type == NODE_TYPE_FILE) {
-				jukebox_play_file(node, tmp_index);
-				g_index_selected_file = tmp_index;
-				break;
-			}
-			tmp_index--;
-		}
+		play_previous_track();
 	}
 	else if (strcmp(button_id, "next_button") == 0) {
-		const int max_index = (int)g_clickable_list.internal.count-1;
-		if (g_index_selected_file >= max_index) return;
-
-		int tmp_index = g_index_selected_file+1;
-		while (tmp_index <= max_index) {
-			struct Node *node = &g_filebrowser.nodes[tmp_index];
-			if (node->type == NODE_TYPE_FILE) {
-				jukebox_play_file(node, tmp_index);
-				g_index_selected_file = tmp_index;
-				break;
-			}
-			tmp_index++;
-		}
+		play_next_track();
 	}
 
 }
@@ -155,6 +164,13 @@ void app_jukebox_open(struct Screen *screen)
 
 void app_jukebox_render(struct Screen *screen)
 {
+	switch (audio_get_play_status()) {
+		case PLAY_STATUS_PLAYING: g_player.is_playing = true; break;
+		case PLAY_STATUS_PAUSED : g_player.is_playing = false; break;
+		case PLAY_STATUS_STOPPED: g_player.is_playing = false; break;
+		case PLAY_STATUS_FINISHED: play_next_track(); break;
+	}
+
 	screen_draw_text(screen,
 		g_player.x, g_player.y-30,
 		g_config.screen_font_size_xs, g_filebrowser.sub_path);

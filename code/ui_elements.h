@@ -13,35 +13,29 @@ enum Button_Type {
 	BUTTON_TYPE_ICON
 };
 
-struct Ui_Attributes {
+struct Ui_Outline {
 	int x;
 	int y;
 	int w;
 	int h;
 	enum Ui_Border border;
 };
+bool ui_outline_selected(const struct Screen *screen, const struct Ui_Outline *outline);
 
 struct Ui_Button {
 	char id[40];
-	int x;
-	int y;
-	int w;
-	int h;
 	char text[40];
+	struct Ui_Outline outline;
 	enum Button_Type type;
 	void (*on_click)(struct Ui_Button *btn);
 	int font_size;
-	enum Ui_Border border;
 	bool is_selectable;
 	void *user_data;
 };
 
 struct Ui_Box {
 	char id[40];
-	int x;
-	int y;
-	int w;
-	int h;
+	struct Ui_Outline outline;
 	void (*on_click)(struct Ui_Box *box);
 	bool is_selectable;
 	void *userdata;
@@ -59,7 +53,7 @@ struct Ui_Window {
 #define UI_LIST_MAX_ITEMS    40
 #define UI_LIST_MAX_ITEM_LEN 40
 struct Ui_Clickable_List {
-	struct Ui_Attributes attr;
+	struct Ui_Outline attr;
 	void (*on_click)(int index);
 	struct {
 		char items[UI_LIST_MAX_ITEMS][UI_LIST_MAX_ITEM_LEN];

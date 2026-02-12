@@ -119,17 +119,18 @@ void app_radio_init(struct Screen *screen, const char *filepath)
 
 void app_radio_render(struct Screen *screen)
 {
-	static int frame_count = 0;
+	//static int frame_count = 0;
 
-	if (g_player.is_playing) {
-		// TODO: not really stable upcounting...
-		++frame_count;
-		
-		if (frame_count >= SCREEN_FPS) {
-			g_player.track_pos_sec++;
-			frame_count = 0;
-		}
-	}
+	g_player.track_pos_sec = audio_get_current_pos_in_secs();
+	//if (g_player.is_playing) {
+	//	// TODO: not really stable upcounting...
+	//	++frame_count;
+
+	//	if (frame_count >= SCREEN_FPS) {
+	//		g_player.track_pos_sec++;
+	//		frame_count = 0;
+	//	}
+	//}
 
 	snprintf(
 		g_player.last_line,
@@ -137,18 +138,6 @@ void app_radio_render(struct Screen *screen)
 		"Buffered: %d kB",
 		audio_get_buffered_bytes()/1024);
 
-	//static time_t timestamp_last = 0;
-
-	//if (g_player.is_playing) {
-	//	time_t timestamp_current = time(NULL);
-
-	//	if (timestamp_last-timestamp_current > 1) {
-	//		g_player.track_pos_sec++;
-	//	}
-	//}
-
-
-	
 	ui_clickable_list_render(screen, &g_clickable_list);
 	ui_media_player_render(screen, &g_player);
 }

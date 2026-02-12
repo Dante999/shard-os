@@ -95,6 +95,12 @@ static void on_clickable_list_button_pressed(struct Ui_Button *btn)
 	}
 }
 
+bool ui_outline_selected(const struct Screen *screen, const struct Ui_Outline *outline)
+{
+	return (IN_RANGE((int)screen->mouse_x, outline->x, outline->x+outline->w) &&
+		IN_RANGE((int)screen->mouse_y, outline->y, outline->y+outline->h));
+}
+
 void ui_button_init_icon(
 	struct Screen *screen,
 	struct Ui_Button *btn,
@@ -108,12 +114,12 @@ void ui_button_init_icon(
 	strncpy(btn->text, icon, sizeof(btn->text));
 	strncpy(btn->id, id, sizeof(btn->text));
 
-	btn->type     = BUTTON_TYPE_ICON;
-	btn->x        = x;
-	btn->y        = y;
-	btn->w        = w;
-	btn->h        = UI_BUTTON_FONT_SIZE+2*UI_BUTTON_BORDER_WIDTH;
-	btn->border   = UI_BORDER_NORMAL;
+	btn->type           = BUTTON_TYPE_ICON;
+	btn->outline.x      = x;
+	btn->outline.y      = y;
+	btn->outline.w      = w;
+	btn->outline.h      = UI_BUTTON_FONT_SIZE+2*UI_BUTTON_BORDER_WIDTH;
+	btn->outline.border = UI_BORDER_NORMAL;
 	btn->type     = BUTTON_TYPE_ICON;
 	btn->on_click = on_click;
 	btn->is_selectable = true;
@@ -131,11 +137,11 @@ void ui_button_init(
 	strncpy(btn->id, id, sizeof(btn->text));
 
 	struct Screen_Dimension text_dimensions = screen_get_text_dimension(screen, btn->font_size, btn->text);
-	btn->x        = x;
-	btn->y        = y;
-	btn->w        = text_dimensions.w+2*UI_BUTTON_BORDER_WIDTH;
-	btn->h        = text_dimensions.h+2*UI_BUTTON_BORDER_WIDTH;
-	btn->border   = UI_BORDER_NORMAL;
+	btn->outline.x      = x;
+	btn->outline.y      = y;
+	btn->outline.w      = text_dimensions.w+2*UI_BUTTON_BORDER_WIDTH;
+	btn->outline.h      = text_dimensions.h+2*UI_BUTTON_BORDER_WIDTH;
+	btn->outline.border = UI_BORDER_NORMAL;
 	btn->type     = BUTTON_TYPE_TEXT;
 	btn->on_click = on_click;
 	btn->is_selectable = true;
@@ -145,12 +151,11 @@ void ui_box_render(struct Screen *screen, struct Ui_Box *box)
 {
 	bool is_selected = false;
 
-	if (box->is_selectable && IN_RANGE(screen->mouse_x, box->x, box->x+box->w) &&
-		IN_RANGE(screen->mouse_y, box->y, box->y+box->h)) {
+	if (box->is_selectable && ui_outline_selected(screen, &box->outline)) {
 		is_selected = true;
 	}
 
-	screen_draw_box(screen, box->x, box->y, box->w, box->h, is_selected);
+	screen_draw_box(screen, box->outline.x, box->outline.y, box->outline.w, box->outline.h, is_selected);
 
 	if (is_selected && screen->mouse_clicked && box->on_click != NULL) {
 		box->on_click(box);
@@ -168,10 +173,10 @@ void ui_window_render(struct Screen *screen, struct Ui_Window *window)
 
 	struct Ui_Button close_btn = {0};
 	ui_button_init(screen, &close_btn, "close", window->x+window->w-50, window->y+10, "X", on_ui_window_close);
-	close_btn.w         = 40;
+	close_btn.outline.w = 40;
 	close_btn.on_click  = on_ui_window_close;
 	close_btn.user_data = window;
-	close_btn.border    = UI_BORDER_NONE;
+	close_btn.outline.border = UI_BORDER_NONE;
 
 	screen_draw_window(screen, window->x, window->y,
 			window->w, window->h, window->name);
@@ -184,23 +189,22 @@ void ui_button_render(struct Screen *screen, struct Ui_Button *btn)
 {
 	bool is_selected = false;
 
-	if (btn->is_selectable && IN_RANGE(screen->mouse_x, btn->x, btn->x+btn->w) &&
-		IN_RANGE(screen->mouse_y, btn->y, btn->y+btn->h)) {
+	if (btn->is_selectable && ui_outline_selected(screen, &btn->outline)) {
 		is_selected = true;
 	}
 
-	if (btn->border == UI_BORDER_NORMAL || (btn->border == UI_BORDER_NONE && is_selected)) {
-		screen_draw_box(screen, btn->x, btn->y, btn->w, btn->h, is_selected);
+	if (btn->outline.border == UI_BORDER_NORMAL || (btn->outline.border == UI_BORDER_NONE && is_selected)) {
+		screen_draw_box(screen, btn->outline.x, btn->outline.y, btn->outline.w, btn->outline.h, is_selected);
 	}
 
 	if (btn->type == BUTTON_TYPE_TEXT) {
-		screen_draw_text(screen, btn->x+UI_BUTTON_BORDER_WIDTH, btn->y+UI_BUTTON_BORDER_WIDTH, btn->font_size, btn->text);
+		screen_draw_text(screen, btn->outline.x+UI_BUTTON_BORDER_WIDTH, btn->outline.y+UI_BUTTON_BORDER_WIDTH, btn->font_size, btn->text);
 	}
 	else if (btn->type == BUTTON_TYPE_ICON) {
 		char path[512];
 		snprintf(path, sizeof(path), "%s/icons/%s", g_config.resources_dir, btn->text);
 		screen_draw_icon(screen,
-			btn->x+UI_BUTTON_BORDER_WIDTH, btn->y+UI_BUTTON_BORDER_WIDTH,
+			btn->outline.x+UI_BUTTON_BORDER_WIDTH, btn->outline.y+UI_BUTTON_BORDER_WIDTH,
 			btn->font_size, btn->font_size, path);
 	}
 
@@ -255,9 +259,9 @@ void ui_clickable_list_init(struct Screen *screen,
 		on_clickable_list_button_pressed);
 	list->internal.button_next_page.user_data = list;
 
-	list->internal.button_prev_page.w  = page_button_width;
-	list->internal.button_page_index.w = page_index_width;
-	list->internal.button_next_page.w  = page_button_width;
+	list->internal.button_prev_page.outline.w  = page_button_width;
+	list->internal.button_page_index.outline.w = page_index_width;
+	list->internal.button_next_page.outline.w  = page_button_width;
 	list->internal.button_page_index.is_selectable = false;
 
 	log_info("clickable list created, items_per_page: %zu\n", list->internal.items_per_page);
@@ -318,10 +322,10 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 			on_clickable_list_button_pressed);
 
 		if ((int)i == list->internal.index_selected_item) {
-			screen_draw_box_filled(screen, btn.x, btn.y, list->attr.w, btn.h, SCREEN_COLOR_HIGHLIGHT, SCREEN_COLOR_HIGHLIGHT);
+			screen_draw_box_filled(screen, btn.outline.x, btn.outline.y, list->attr.w, btn.outline.h, SCREEN_COLOR_HIGHLIGHT, SCREEN_COLOR_HIGHLIGHT);
 		}
 		btn.user_data = list;
-		btn.w = list->attr.w;
+		btn.outline.w = list->attr.w;
 		ui_button_render(screen, &btn);
 	}
 
@@ -376,15 +380,15 @@ void ui_media_player_init(
 		x_center+button_width/2+2*button_clearance+button_width,
 		y_button, "Next", on_mediaplayer_button_pressed);
 
-	player->internal.button_play.w            = button_width;
+	player->internal.button_play.outline.w            = button_width;
 	player->internal.button_play.user_data    = player;
-	player->internal.button_prev.w            = button_width;
+	player->internal.button_prev.outline.w            = button_width;
 	player->internal.button_prev.user_data    = player;
-	player->internal.button_next.w            = button_width;
+	player->internal.button_next.outline.w            = button_width;
 	player->internal.button_next.user_data    = player;
-	player->internal.button_rewind.w          = button_width;
+	player->internal.button_rewind.outline.w          = button_width;
 	player->internal.button_rewind.user_data  = player;
-	player->internal.button_forward.w         = button_width;
+	player->internal.button_forward.outline.w         = button_width;
 	player->internal.button_forward.user_data = player;
 
 	player->internal.progress_bar.x = x+UI_MEDIA_PLAYER_CLEARANCE;
