@@ -25,19 +25,26 @@ static void jukebox_play_file(struct Node *node, int index)
 		"%s/%s/%s", g_filebrowser.root_path, g_filebrowser.sub_path, node->name);
 	log_debug("Playing file: %s\n", absolute_filepath);
 
-	struct Audio_File_Metadata metadata = {0};
-	Result r = audio_play_file(absolute_filepath, &metadata);
+	Result r = audio_play_file(absolute_filepath);
+	if (!r.success) {
+		log_error("failed to play file: %s\n", r.msg);
+		return;
+	}
+	g_player.is_playing    = true;
+	g_index_selected_file  = index;
+	ui_clickable_list_select(&g_clickable_list, g_index_selected_file);
+
+	struct Audio_Metadata metadata = {0};
+	r = audio_get_metadata(&metadata);
+
 	if (r.success) {
 		strncpy(g_player.first_line , metadata.artist, sizeof(g_player.first_line));
 		strncpy(g_player.second_line, metadata.title , sizeof(g_player.second_line));
 		g_player.track_len_sec = (int) metadata.length_secs;
-		g_player.is_playing    = true;
-		g_index_selected_file  = index;
-		ui_clickable_list_select(&g_clickable_list, g_index_selected_file);
 		log_debug("title length: %ds\n", g_player.track_len_sec);
 	}
 	else {
-		log_error("failed to play file: %s\n", r.msg);
+		log_warning("failed to get metadata: %s\n", r.msg);
 	}
 }
 

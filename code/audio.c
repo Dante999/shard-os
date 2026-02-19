@@ -53,11 +53,13 @@ static struct Shard_Audio {
 	bool              is_format_set;
 	size_t bytes_feed;
 	float gain;
+	struct Audio_Metadata metadata;
 	struct Track_Info {
 		long rate_hz;
 		int channels;
 		int encoding;
 	} track_info;
+
 	struct Static_Buffer download_buffer;
 	struct Urlstream {
 		pthread_t download_thread;
@@ -107,26 +109,18 @@ static void copy_mpg123_string(char *dst, mpg123_string *src ,size_t dst_size)
     dst[n] = '\0';
 }
 
-static Result get_metadata_from_stream(struct Audio_File_Metadata *metadata)
-{
-	int error = mpg123_scan(g_audio.decode_handle);
-	if (error != MPG123_OK) {
-		return result_make(false, "failed to scan file %s: %s",
-				mpg123_strerror(g_audio.decode_handle));
-	}
-	set_audio_format_if_needed();
-	assert(g_audio.track_info.rate_hz != 0);
 
-	off_t samples = mpg123_length(g_audio.decode_handle);
-	metadata->length_secs = (double) samples / (double)g_audio.track_info.rate_hz;
+static Result audio_parse_id3_metadata(void)
+{
+	struct Audio_Metadata *metadata = &g_audio.metadata;
 
 	mpg123_id3v1 *v1;
 	mpg123_id3v2 *v2;
 
-	error = mpg123_id3(g_audio.decode_handle, &v1, &v2);
+	int error = mpg123_id3(g_audio.decode_handle, &v1, &v2);
 	if (error != MPG123_OK) {
 		return result_make(
-			false, 
+			false,
 			"failed to get id3 tags: %s",
 			mpg123_plain_strerror(error));
 	}
@@ -140,7 +134,6 @@ static Result get_metadata_from_stream(struct Audio_File_Metadata *metadata)
 		copy_mpg123_string(metadata->title, v2->title, sizeof(metadata->title));
 		return result_make_success();
 	}
-
 	return result_make(false, "no id3 tags contained!");
 }
 
@@ -154,14 +147,41 @@ static size_t fill_stream_from_url(uint8_t *dst, size_t bytes_wanted)
 		g_audio.download_buffer.used = 0;
 		pthread_mutex_unlock(&g_audio.stream_by_url.lock);
 
-		mpg123_feed(
+		int error = mpg123_feed(
 			g_audio.decode_handle,
 			tmp_buffer.data,
 			tmp_buffer.used);
 		g_audio.bytes_feed += tmp_buffer.used;
+
+		if (error != MPG123_OK) {
+			log_error("error while mpg123_feed via url: %s\n", mpg123_plain_strerror(error));
+		}
 	}
+
+	//int retval = mpg123_meta_check(g_audio.decode_handle);
+	//log_info("meta check return : 0x%x\n", retval);
+	//if ((retval&(1<< MPG123_ID3)) != 0 || (retval&(1<<MPG123_NEW_ID3)) != 0) {
+	//	Result ret = audio_parse_id3_metadata();
+	//	if (ret.success) {
+	//		log_info("successfully parsed id3 metadata:\n"
+	//			"\tartist: %s\n"
+	//			"\ttitle: %s\n",
+	//			g_audio.metadata.artist,
+	//			g_audio.metadata.title);
+	//	}
+	//	else {
+	//		log_warning("failed to parse id3 metadata: %s\n", ret.msg);
+	//	}
+	//}
+	//else if (retval != 0) {
+	//	// nothing
+	//}
+
 	size_t bytes_done;
-	mpg123_read(g_audio.decode_handle, dst, bytes_wanted, &bytes_done);
+	int error = mpg123_read(g_audio.decode_handle, dst, bytes_wanted, &bytes_done);
+	if (error != MPG123_OK) {
+		log_error("error while mpg123_read() via url: %s\n", mpg123_plain_strerror(error));
+	}
 
 	if (bytes_done > g_audio.bytes_feed) {
 		g_audio.bytes_feed = 0;
@@ -348,6 +368,8 @@ static void init_play_audio(void)
 	clear_download_and_cache();
 
 	mpg123_close(g_audio.decode_handle);
+
+	memset(&g_audio.metadata, 0, sizeof(g_audio.metadata));
 	g_audio.bytes_feed = 0;
 	g_audio.stream_by_url.quit         = false;
 	g_audio.stream_by_url.eof          = false;
@@ -371,26 +393,23 @@ Result audio_play_url(const char *url)
 	}
 
 	g_audio.type = STREAM_TYPE_URL;
-	audio_resume();	
+	audio_resume();
 
 	return result_make_success();
 }
 
-Result audio_play_file(const char *filepath, struct Audio_File_Metadata *metadata)
+Result audio_play_file(const char *filepath)
 {
 	init_play_audio();
-
-	UNUSED(metadata);
 
 	if (mpg123_open(g_audio.decode_handle, filepath) != MPG123_OK) {
 		return result_make(false, "failed to open file %s: %s",
 			filepath, mpg123_strerror(g_audio.decode_handle));
 	}
-
-	Result res = get_metadata_from_stream(metadata);
-
-	if (res.success) {
-		log_error("failed to get metadata: %s\n", res.msg);
+	mpg123_scan(g_audio.decode_handle);
+	Result r = audio_parse_id3_metadata();
+	if (!r.success) {
+		log_warning("unable to parse id3 metadata: %s\n", r.msg);
 	}
 
 	g_audio.type = STREAM_TYPE_FILE;
@@ -509,4 +528,14 @@ float audio_get_gain(void)
 void audio_set_gain(float gain)
 {
 	SDL_SetAudioStreamGain(g_audio.stream, gain);
+}
+
+
+Result audio_get_metadata(struct Audio_Metadata *metadata)
+{
+	strncpy(metadata->title, g_audio.metadata.title, sizeof(metadata->title));
+	strncpy(metadata->artist, g_audio.metadata.artist, sizeof(metadata->artist));
+	metadata->length_secs = g_audio.metadata.length_secs;
+
+	return result_make_success();
 }

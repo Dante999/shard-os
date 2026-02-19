@@ -3,7 +3,7 @@
 
 #include "libcutils/result.h"
 
-struct Audio_File_Metadata {
+struct Audio_Metadata{
 	char artist[255];
 	char title[255];
 	double length_secs;
@@ -16,8 +16,9 @@ enum Play_Status {
 	PLAY_STATUS_FINISHED
 };
 
-Result audio_play_file(const char *filepath, struct Audio_File_Metadata *metadata);
 Result audio_play_url(const char *url);
+Result audio_play_file(const char *filepath);
+Result audio_get_metadata(struct Audio_Metadata *metadata);
 int audio_get_buffered_bytes(void);
 int audio_get_buffered_percent(void);
 bool audio_is_playing(void);
