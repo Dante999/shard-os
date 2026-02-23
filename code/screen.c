@@ -565,6 +565,7 @@ void screen_rendering_start(struct Screen *screen)
 
 		case SDL_EVENT_MOUSE_BUTTON_DOWN:
 			// we dont' care which mouse button was clicked
+			log_debug("mouse clicked: x=%04f y=%04f\n", (double)screen->mouse_x, (double)screen->mouse_y);
 			screen->mouse_clicked = true;
 			break;
 
@@ -574,6 +575,7 @@ void screen_rendering_start(struct Screen *screen)
 			SDL_GetCurrentRenderOutputSize(screen->renderer, &w, &h);
 			screen->mouse_x = (int)((float)w*event.tfinger.x);
 			screen->mouse_y = (int)((float)h*event.tfinger.y);
+			log_debug("finger down: x=%04f y=%04f\n", (double)screen->mouse_x, (double)screen->mouse_y);
 			break;
 		}
 	}

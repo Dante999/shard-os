@@ -35,42 +35,59 @@ struct App g_apps[] = {
 };
 
 
+struct {
+	struct Ui_Dialog instance;
+	bool first_time_open;
+} g_dialog;
+
 bool g_is_sleeping = false;
-//struct Ui_Button g_sleep_button = {0};
 
-void on_sleep_icon_clicked(void)
+// TODO: Store global gain level to not reset it when an audio app is closed
+static void render_audio_settings(struct Screen *screen)
 {
+	static struct Ui_Chooser_Integer volume_chooser = {
+		.name = "Volume",
+		.outline = {
+			.x = UI_DIALOG_X_START + SCREEN_BORDER_WIDTH,
+			.y = UI_DIALOG_Y_START + SCREEN_BORDER_WIDTH,
+			.w = (UI_DIALOG_X_END - UI_DIALOG_Y_START - SCREEN_BORDER_WIDTH)/3,
+			.h = 0
+		},
+		.x_value_offset = 100,
+		.min_value = 0,
+		.max_value = 100,
+		.steps = 10,
+		.cur_value = 0
+	};
+
+	int old_val = (int)(audio_get_gain() * 100.0f);
+
+	volume_chooser.cur_value = old_val;
+	ui_chooser_integer_render(screen, &volume_chooser);
+
+	if (volume_chooser.cur_value != old_val) {
+		audio_set_gain((float)volume_chooser.cur_value / 100.0f);
+	}
+
+}
+
+static void render_sleep_dialog(struct Screen *screen)
+{
+	UNUSED(screen);
 	g_is_sleeping = true;
+	g_dialog.first_time_open = false;
+	g_dialog.instance.is_open = false;
 }
 
-#define VOLUME_STEP 0.1f
-void on_volume_down_clicked(void)
-{
-	float vol = audio_get_gain();
-	if (vol >= VOLUME_STEP) {
-		log_info("vol-: %f\n", (double)vol);
-		audio_set_gain(vol-0.1f);
-	}
-}
-
-void on_volume_up_clicked(void)
-{
-	float vol = audio_get_gain();
-	if (vol <= 1.0f-VOLUME_STEP) {
-		log_info("vol+: %f\n", (double)vol);
-		audio_set_gain(vol+0.1f);
-	}
-}
 
 struct Icon {
 	const char *name;
-	void (*on_click)(void);
+	void (*render_dialog)(struct Screen *screen);
 };
 
 struct Icon g_icons[] = {
-	{"[SLEEP]", on_sleep_icon_clicked},
-	{"[VOL-]", on_volume_down_clicked},
-	{"[VOL+]", on_volume_up_clicked}
+	{"[SLEEP]", render_sleep_dialog},
+	{"[AUDIO]", render_audio_settings},
 };
 
 void ui_main_init(struct Screen *screen)
@@ -85,8 +102,15 @@ void ui_main_init(struct Screen *screen)
 static void on_icon_clicked(struct Ui_Button *btn)
 {
 	//(*on_click)(void) cb = (void (*)(void))btn->user_data;
-	void (*to_func)(void) = (void (*)(void))(intptr_t)btn->user_data;
-	to_func();
+	//void (*to_func)(void) = (void (*)(void))(intptr_t)btn->user_data;
+	//to_func();
+
+	struct Icon *icon = (struct Icon*) btn->user_data;
+
+	g_dialog.first_time_open = true;
+	g_dialog.instance.is_open = true;
+	g_dialog.instance.name = icon->name;
+	g_dialog.instance.render_content = icon->render_dialog;
 }
 
 static void ui_main_draw_header_icons(struct Screen *screen, int x_left, int y_top, int height)
@@ -104,7 +128,7 @@ static void ui_main_draw_header_icons(struct Screen *screen, int x_left, int y_t
 				on_icon_clicked);
 
 		button.outline.border = UI_BORDER_NONE;
-		button.user_data = icon->on_click;
+		button.user_data = icon;
 
 		ui_button_render(screen, &button);
 		x_left += button.outline.w + 10;
@@ -227,6 +251,14 @@ void ui_main_render(struct Screen *screen)
 	}
 
 	ui_main_draw_header(screen);
+	if (g_dialog.instance.is_open) {
+		if (g_dialog.first_time_open) {
+			screen->mouse_clicked    = false;
+			g_dialog.first_time_open = false;
+		}
+		ui_dialog_render(screen, &g_dialog.instance);
+		return;
+	}
 
 	if (g_active_app_idx == -1) {
 		ui_draw_app_icons(screen);

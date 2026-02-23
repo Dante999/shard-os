@@ -503,5 +503,85 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 			SCREEN_COLOR_PRIMARY,
 			SCREEN_COLOR_PRIMARY);
 	}
+}
 
+static void on_dialog_close_button(struct Ui_Button *btn)
+{
+	((struct Ui_Dialog *) btn->user_data)->is_open = false;
+}
+
+void ui_dialog_render(struct Screen *screen, struct Ui_Dialog *dialog)
+{
+	PRECONDITION(screen != NULL);
+	PRECONDITION(dialog != NULL);
+
+	static struct Ui_Box box = {
+		.id="dialog",
+		.outline = {
+			.x = UI_DIALOG_X_START,
+			.y = UI_DIALOG_Y_START,
+			.w = UI_DIALOG_X_END-UI_DIALOG_X_START,
+			.h = UI_DIALOG_Y_END-UI_DIALOG_Y_START
+		},
+		.on_click = NULL,
+		.is_selectable = false
+	};
+	static struct Ui_Button close_btn = {0};
+	close_btn.user_data = dialog;
+	ui_button_init(screen, &close_btn, "close", UI_DIALOG_X_END-50, UI_DIALOG_Y_END-50, "CLOSE ", on_dialog_close_button);
+	close_btn.outline.x -= close_btn.outline.w-UI_BUTTON_HEIGHT;
+
+	ui_button_render(screen, &close_btn);
+	ui_box_render(screen, &box);
+	if (dialog->render_content != NULL) {
+		dialog->render_content(screen);
+	}
+}
+
+static void on_int_chooser_clicked(struct Ui_Button *btn)
+{
+	struct Ui_Chooser_Integer *chooser = (struct Ui_Chooser_Integer *) btn->user_data;
+	if (strcmp(btn->id, "increase") == 0) {
+		if (chooser->cur_value+chooser->steps <= chooser->max_value) {
+			chooser->cur_value += chooser->steps;
+		}
+	}
+	else if (strcmp(btn->id, "decrease") == 0) {
+		if (chooser->cur_value-chooser->steps >= chooser->min_value) {
+			chooser->cur_value -= chooser->steps;
+		}
+	}
+
+}
+#define UI_CHOOSER_BUTTON_WIDTH 40
+void ui_chooser_integer_render(struct Screen *screen, struct Ui_Chooser_Integer *chooser)
+{
+	struct Ui_Button btn_decrease = {.user_data = chooser};
+	struct Ui_Button btn_increase = {.user_data = chooser};
+
+	ui_button_init(screen, &btn_decrease, "decrease",
+		chooser->outline.x + chooser->x_value_offset, chooser->outline.y, "<-", on_int_chooser_clicked);
+	ui_button_init(screen, &btn_increase, "increase",
+		chooser->outline.x+chooser->outline.w-UI_CHOOSER_BUTTON_WIDTH,chooser->outline.y, "->", on_int_chooser_clicked);
+
+	btn_decrease.outline.w = UI_CHOOSER_BUTTON_WIDTH;
+	btn_increase.outline.w = UI_CHOOSER_BUTTON_WIDTH;
+
+	screen_draw_text(screen, chooser->outline.x,
+		chooser->outline.y+UI_BUTTON_BORDER_WIDTH,
+		UI_BUTTON_FONT_SIZE, chooser->name);
+
+	char val_buffer[255];
+	snprintf(val_buffer, sizeof(val_buffer), "%d", chooser->cur_value);
+	screen_draw_text(
+		screen,btn_decrease.outline.x+20+
+		(btn_increase.outline.x-
+		(btn_decrease.outline.x+btn_decrease.outline.w))/2,
+		chooser->outline.y+UI_BUTTON_BORDER_WIDTH,
+		UI_BUTTON_FONT_SIZE,
+		val_buffer);
+
+
+	ui_button_render(screen, &btn_decrease);
+	ui_button_render(screen, &btn_increase);
 }
