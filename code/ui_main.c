@@ -40,9 +40,8 @@ struct {
 	bool first_time_open;
 } g_dialog;
 
-bool g_is_sleeping = false;
+static bool g_is_sleeping = false;
 
-// TODO: Store global gain level to not reset it when an audio app is closed
 static void render_audio_settings(struct Screen *screen)
 {
 	static struct Ui_Chooser_Integer volume_chooser = {
@@ -60,13 +59,12 @@ static void render_audio_settings(struct Screen *screen)
 		.cur_value = 0
 	};
 
-	int old_val = (int)(audio_get_gain() * 100.0f);
-
-	volume_chooser.cur_value = old_val;
+	volume_chooser.cur_value = g_config.volume;
 	ui_chooser_integer_render(screen, &volume_chooser);
 
-	if (volume_chooser.cur_value != old_val) {
-		audio_set_gain((float)volume_chooser.cur_value / 100.0f);
+	if (volume_chooser.cur_value != g_config.volume) {
+		g_config.volume = volume_chooser.cur_value;
+		audio_set_volume(g_config.volume);
 	}
 
 }
@@ -99,38 +97,29 @@ void ui_main_init(struct Screen *screen)
 
 }
 
-static void on_icon_clicked(struct Ui_Button *btn)
-{
-	//(*on_click)(void) cb = (void (*)(void))btn->user_data;
-	//void (*to_func)(void) = (void (*)(void))(intptr_t)btn->user_data;
-	//to_func();
-
-	struct Icon *icon = (struct Icon*) btn->user_data;
-
-	g_dialog.first_time_open = true;
-	g_dialog.instance.is_open = true;
-	g_dialog.instance.name = icon->name;
-	g_dialog.instance.render_content = icon->render_dialog;
-}
-
 static void ui_main_draw_header_icons(struct Screen *screen, int x_left, int y_top, int height)
 {
+	UNUSED(height);
+
 	struct Ui_Button button = {0};
 	for (size_t i=0; i < ARRAY_SIZE(g_icons); ++i) {
 		struct Icon *icon = &g_icons[i];
 		ui_button_init(
-				screen,
-				&button,
-				icon->name,
-				x_left,
-				y_top,
-				icon->name,
-				on_icon_clicked);
+			screen,
+			&button,
+			icon->name,
+			x_left,
+			y_top);
 
 		button.outline.border = UI_BORDER_NONE;
-		button.user_data = icon;
 
-		ui_button_render(screen, &button);
+		if (ui_button_render(screen, &button) == UI_EVENT_CLICKED) {
+			g_dialog.first_time_open = true;
+			g_dialog.instance.is_open = true;
+			g_dialog.instance.name = icon->name;
+			g_dialog.instance.render_content = icon->render_dialog;
+			icon->render_dialog(screen);
+		}
 		x_left += button.outline.w + 10;
 	}
 }

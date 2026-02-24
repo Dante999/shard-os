@@ -46,28 +46,32 @@ static void on_radio_station_clicked(int index)
 	strncpy(g_player.first_line , radio->name, sizeof(g_player.first_line));
 }
 
-static void on_mediaplayer_clicked(const char *button_id)
+static void on_mediaplayer_clicked(enum Ui_Media_Button btn)
 {
-	if (strcmp(button_id, UI_MEDIA_PLAYER_PLAY_BUTTON_ID) == 0) {
-		if (audio_is_playing()) {
-			audio_pause();
-			g_player.is_playing = false;
-		}
-		else {
-			int index = g_radio_stations.selected_item;
-
-			if (index != -1) {
-				struct Radio_Station *radio = &g_radio_stations.items[index];
-				Result res = audio_play_url(radio->url);
-
-				if (!res.success) {
-					log_error("failed to play radio station: %s", res.msg);
-				}
-				g_player.is_playing = true;
-				g_player.track_pos_sec = 0;
-				strncpy(g_player.first_line , radio->name, sizeof(g_player.first_line));
+	switch(btn) {
+		case UI_MEDIA_BUTTON_PLAY: 
+			if (audio_is_playing()) {
+				audio_pause();
+				g_player.is_playing = false;
 			}
-		}
+			else {
+				int index = g_radio_stations.selected_item;
+
+				if (index != -1) {
+					struct Radio_Station *radio = &g_radio_stations.items[index];
+					Result res = audio_play_url(radio->url);
+
+					if (!res.success) {
+						log_error("failed to play radio station: %s", res.msg);
+					}
+					g_player.is_playing = true;
+					g_player.track_pos_sec = 0;
+					strncpy(g_player.first_line , radio->name, sizeof(g_player.first_line));
+				}
+			}
+			break;
+
+		default: break;
 	}
 }
 

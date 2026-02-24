@@ -34,67 +34,6 @@ struct Audio_Len seconds_to_len(int seconds){
 	return len;
 }
 
-static void on_mediaplayer_button_pressed(struct Ui_Button *btn)
-{
-	log_debug("on_mediaplayer_button_pressed: %s\n", btn->id);
-	assert(btn->user_data != NULL);
-
-	struct Ui_Media_Player *ptr = (struct Ui_Media_Player*) btn->user_data;
-
-	if (ptr->on_button_clicked != NULL) {
-		ptr->on_button_clicked(btn->id);
-	}
-	else {
-		log_debug("no callback on mediaplayer set\n");
-	}
-}
-
-static void on_clickable_list_button_pressed(struct Ui_Button *btn)
-{
-	log_debug("clickable list, button pressed: id=%s\n", btn->id);
-	struct Ui_Clickable_List *list = (struct Ui_Clickable_List*) btn->user_data;
-
-	if (list == NULL) {
-		log_error("button has list instance not as user data set!\n");
-		return;
-	}
-
-	log_debug("on_list_item_clicked (count=%zu)\n", list->internal.count);
-	if (strcmp("btn_prev", btn->id) == 0 ) {
-		if (list->internal.page_index > 0) {
-			--list->internal.page_index;
-		}
-		return;
-	}
-
-	if (strcmp("btn_next", btn->id) == 0) {
-		size_t max_page_index = list->internal.count/list->internal.items_per_page;
-		log_debug("next page: currently %zu of %zu\n", list->internal.page_index, max_page_index);
-		if (list->internal.page_index < max_page_index) {
-			++list->internal.page_index;
-		}
-		return;
-	}
-
-	if (strcmp("btn_index", btn->id) == 0 && list->internal.page_index > 0) return;
-
-	char *end;
-	long val = strtol(btn->id, &end, 10); // base 10
-
-	if (btn->id == end) {
-		log_error("Failed to parse button id as integer!\n");
-		return;
-	}
-
-	if (list->on_click != NULL) {
-		log_info("invoking callback\n");
-		list->on_click((int)val);
-	}
-	else {
-		log_warning("no callback for button set\n");
-	}
-}
-
 bool ui_outline_selected(const struct Screen *screen, const struct Ui_Outline *outline)
 {
 	return (IN_RANGE((int)screen->mouse_x, outline->x, outline->x+outline->w) &&
@@ -104,15 +43,12 @@ bool ui_outline_selected(const struct Screen *screen, const struct Ui_Outline *o
 void ui_button_init_icon(
 	struct Screen *screen,
 	struct Ui_Button *btn,
-	const char *id, int x, int y, int w,
-	const char *icon,
-	void (*on_click)(struct Ui_Button *btn))
+	const char *icon, int x, int y, int w)
 {
 	(void) screen;
 
 	btn->font_size = UI_BUTTON_FONT_SIZE;
 	strncpy(btn->text, icon, sizeof(btn->text));
-	strncpy(btn->id, id, sizeof(btn->text));
 
 	btn->type           = BUTTON_TYPE_ICON;
 	btn->outline.x      = x;
@@ -121,20 +57,16 @@ void ui_button_init_icon(
 	btn->outline.h      = UI_BUTTON_FONT_SIZE+2*UI_BUTTON_BORDER_WIDTH;
 	btn->outline.border = UI_BORDER_NORMAL;
 	btn->type     = BUTTON_TYPE_ICON;
-	btn->on_click = on_click;
 	btn->is_selectable = true;
 }
 
 void ui_button_init(
 	struct Screen *screen,
 	struct Ui_Button *btn,
-	const char *id, int x, int y,
-	const char *text,
-	void (*on_click)(struct Ui_Button *btn))
+	const char *text, int x, int y)
 {
 	btn->font_size = UI_BUTTON_FONT_SIZE;
 	strncpy(btn->text, text, sizeof(btn->text));
-	strncpy(btn->id, id, sizeof(btn->text));
 
 	struct Screen_Dimension text_dimensions = screen_get_text_dimension(screen, btn->font_size, btn->text);
 	btn->outline.x      = x;
@@ -143,7 +75,6 @@ void ui_button_init(
 	btn->outline.h      = text_dimensions.h+2*UI_BUTTON_BORDER_WIDTH;
 	btn->outline.border = UI_BORDER_NORMAL;
 	btn->type     = BUTTON_TYPE_TEXT;
-	btn->on_click = on_click;
 	btn->is_selectable = true;
 }
 
@@ -162,30 +93,24 @@ void ui_box_render(struct Screen *screen, struct Ui_Box *box)
 	}
 }
 
-static void on_ui_window_close(struct Ui_Button *btn)
-{
-	struct Ui_Window *window = (struct Ui_Window*) btn->user_data;
-	window->should_close = true;
-}
-
 void ui_window_render(struct Screen *screen, struct Ui_Window *window)
 {
 
 	struct Ui_Button close_btn = {0};
-	ui_button_init(screen, &close_btn, "close", window->x+window->w-50, window->y+10, "X", on_ui_window_close);
+	ui_button_init(screen, &close_btn, "X", window->x+window->w-50, window->y+10);
 	close_btn.outline.w = 40;
-	close_btn.on_click  = on_ui_window_close;
-	close_btn.user_data = window;
 	close_btn.outline.border = UI_BORDER_NONE;
 
 	screen_draw_window(screen, window->x, window->y,
-			window->w, window->h, window->name);
+		window->w, window->h, window->name);
 
-	ui_button_render(screen, &close_btn);
+	if (ui_button_render(screen, &close_btn) == UI_EVENT_CLICKED) {
+		window->should_close = true;
+	}
 
 }
 
-void ui_button_render(struct Screen *screen, struct Ui_Button *btn)
+enum Ui_Event ui_button_render(struct Screen *screen, struct Ui_Button *btn)
 {
 	bool is_selected = false;
 
@@ -208,9 +133,14 @@ void ui_button_render(struct Screen *screen, struct Ui_Button *btn)
 			btn->font_size, btn->font_size, path);
 	}
 
-	if (is_selected && screen->mouse_clicked && btn->on_click != NULL) {
-		btn->on_click(btn);
+	if (is_selected && screen->mouse_clicked) {
+		return UI_EVENT_CLICKED;
 	}
+	if (is_selected) {
+		return UI_EVENT_SELECTED;
+	}
+
+	return UI_EVENT_NONE;
 }
 
 void ui_clickable_list_init(struct Screen *screen,
@@ -234,30 +164,18 @@ void ui_clickable_list_init(struct Screen *screen,
 	const int page_button_width = 70;
 	const int page_index_width  = 50;
 	const int nav_page_width    = page_button_width*2 + page_index_width + 2*page_clearance;
-#if 1
-	ui_button_init(
-		screen, &list->internal.button_prev_page , "btn_prev" ,
-		x_center-nav_page_width/2, y_pagination, "prev",
-		on_clickable_list_button_pressed);
-	list->internal.button_prev_page.user_data = list;
-#else
-	ui_button_init_icon(
-		screen, &list->internal.button_prev_page, "btn_prev",
-		x_center-nav_page_width/2, y_pagination, page_button_width,
-		"arrow-left-64x64.png",
-		on_clickable_list_button_pressed);
-#endif
 
 	ui_button_init(
-		screen, &list->internal.button_page_index, "btn_index",
-		x_center-page_index_width/2, y_pagination, "0",
-		on_clickable_list_button_pressed);
+		screen, &list->internal.button_prev_page , "prev" ,
+		x_center-nav_page_width/2, y_pagination);
 
 	ui_button_init(
-		screen, &list->internal.button_next_page , "btn_next" ,
-		x_center+nav_page_width/2-page_button_width, y_pagination, "next",
-		on_clickable_list_button_pressed);
-	list->internal.button_next_page.user_data = list;
+		screen, &list->internal.button_page_index, "0",
+		x_center-page_index_width/2, y_pagination);
+
+	ui_button_init(
+		screen, &list->internal.button_next_page , "next" ,
+		x_center+nav_page_width/2-page_button_width, y_pagination);
 
 	list->internal.button_prev_page.outline.w  = page_button_width;
 	list->internal.button_page_index.outline.w = page_index_width;
@@ -306,6 +224,7 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 
 	size_t start = list->internal.page_index * list->internal.items_per_page;
 	size_t end   = MIN(start+list->internal.items_per_page, list->internal.count);
+
 	if (start >= end) start=0;
 
 	// TODO: render relative positions depending on page_index instead of
@@ -313,20 +232,17 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 	struct Ui_Button btn;
 
 	for (size_t i=start; i < end; ++i) {
-		char btn_id[25];
-		snprintf(btn_id, sizeof(btn_id), "%zu", i);
-		ui_button_init(screen, &btn, btn_id,
+		ui_button_init(screen, &btn, list->internal.items[i],
 			list->attr.x,
-			list->attr.y + (int)(i-start) * UI_CLICKABLE_LIST_ENTRY_FACTOR,
-			list->internal.items[i],
-			on_clickable_list_button_pressed);
+			list->attr.y + (int)(i-start) * UI_CLICKABLE_LIST_ENTRY_FACTOR);
 
 		if ((int)i == list->internal.index_selected_item) {
 			screen_draw_box_filled(screen, btn.outline.x, btn.outline.y, list->attr.w, btn.outline.h, SCREEN_COLOR_HIGHLIGHT, SCREEN_COLOR_HIGHLIGHT);
 		}
-		btn.user_data = list;
 		btn.outline.w = list->attr.w;
-		ui_button_render(screen, &btn);
+		if (ui_button_render(screen, &btn) == UI_EVENT_CLICKED) {
+			list->on_click((int)i);
+		}
 	}
 
 	struct Ui_Button *btn_prev  = &list->internal.button_prev_page;
@@ -335,16 +251,28 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 
 	snprintf(btn_index->text, sizeof(btn_index->text), "%zu", list->internal.page_index+1);
 
-	ui_button_render(screen, btn_prev);
+	if (ui_button_render(screen, btn_prev) == UI_EVENT_CLICKED) {
+		log_debug("prev page: currently %zu\n", list->internal.page_index); 
+		if (list->internal.page_index > 0) {
+			--list->internal.page_index;
+		}
+
+	}
+	if (ui_button_render(screen, btn_next) == UI_EVENT_CLICKED) {
+		size_t max_page_index = (list->internal.count-1)/list->internal.items_per_page;
+		log_debug("next page: currently %zu of %zu\n", list->internal.page_index, max_page_index);
+		if (list->internal.page_index < max_page_index) {
+			++list->internal.page_index;
+		}
+	}
 	ui_button_render(screen, btn_index);
-	ui_button_render(screen, btn_next);
 }
 
 void ui_media_player_init(
 	struct Screen *screen,
 	struct Ui_Media_Player *player,
 	int x, int y, int w, int h,
-	void (*on_button_clicked)(const char *id))
+	void (*on_button_clicked)(enum Ui_Media_Button btn))
 {
 
 	player->is_playing = false;
@@ -360,41 +288,35 @@ void ui_media_player_init(
 	const int y_progress   = y_button-40;
 	const int button_clearance = 20;
 
-	ui_button_init(screen, &player->internal.button_play, UI_MEDIA_PLAYER_PLAY_BUTTON_ID,
+	ui_button_init(screen, &player->internal.button_play, "Play",
 		x_center-button_width/2,
-		y_button, "Play", on_mediaplayer_button_pressed);
+		y_button);
 
-	ui_button_init(screen, &player->internal.button_rewind, UI_MEDIA_PLAYER_REW_BUTTON_ID,
+	ui_button_init(screen, &player->internal.button_rewind, "Rew",
 		x_center-button_width/2-button_clearance-button_width,
-		y_button, "Rew", on_mediaplayer_button_pressed);
+		y_button);
 
-	ui_button_init(screen, &player->internal.button_prev, UI_MEDIA_PLAYER_PREV_BUTTON_ID,
+	ui_button_init(screen, &player->internal.button_prev, "Prev",
 		x_center-button_width/2-2*button_clearance-2*button_width,
-		y_button, "Prev", on_mediaplayer_button_pressed);
+		y_button);
 
-	ui_button_init(screen, &player->internal.button_forward,UI_MEDIA_PLAYER_FWD_BUTTON_ID,
+	ui_button_init(screen, &player->internal.button_forward, "Fwd",
 		x_center+button_width/2+button_clearance,
-		y_button, "Fwd", on_mediaplayer_button_pressed);
+		y_button);
 
-	ui_button_init(screen, &player->internal.button_next, UI_MEDIA_PLAYER_NEXT_BUTTON_ID,
+	ui_button_init(screen, &player->internal.button_next, "Next",
 		x_center+button_width/2+2*button_clearance+button_width,
-		y_button, "Next", on_mediaplayer_button_pressed);
+		y_button);
 
-	player->internal.button_play.outline.w            = button_width;
-	player->internal.button_play.user_data    = player;
-	player->internal.button_prev.outline.w            = button_width;
-	player->internal.button_prev.user_data    = player;
-	player->internal.button_next.outline.w            = button_width;
-	player->internal.button_next.user_data    = player;
-	player->internal.button_rewind.outline.w          = button_width;
-	player->internal.button_rewind.user_data  = player;
-	player->internal.button_forward.outline.w         = button_width;
-	player->internal.button_forward.user_data = player;
+	player->internal.button_play.outline.w    = button_width;
+	player->internal.button_prev.outline.w    = button_width;
+	player->internal.button_next.outline.w    = button_width;
+	player->internal.button_rewind.outline.w  = button_width;
+	player->internal.button_forward.outline.w = button_width;
 
 	player->internal.progress_bar.x = x+UI_MEDIA_PLAYER_CLEARANCE;
 	player->internal.progress_bar.y = y_progress;
 	player->internal.progress_bar.w = w-2*UI_MEDIA_PLAYER_CLEARANCE;
-
 }
 
 
@@ -429,11 +351,22 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 	else {
 		strncpy(player->internal.button_play.text, "Play", sizeof(player->internal.button_play.text));
 	}
-	ui_button_render(screen, &player->internal.button_play);
-	ui_button_render(screen, &player->internal.button_rewind);
-	ui_button_render(screen, &player->internal.button_prev);
-	ui_button_render(screen, &player->internal.button_next);
-	ui_button_render(screen, &player->internal.button_forward);
+
+	if (ui_button_render(screen, &player->internal.button_play) == UI_EVENT_CLICKED) {
+		player->on_button_clicked(UI_MEDIA_BUTTON_PLAY);
+	}
+	if (ui_button_render(screen, &player->internal.button_rewind) == UI_EVENT_CLICKED) {
+		player->on_button_clicked(UI_MEDIA_BUTTON_REW);
+	}
+	if (ui_button_render(screen, &player->internal.button_prev) == UI_EVENT_CLICKED) {
+		player->on_button_clicked(UI_MEDIA_BUTTON_PREV);
+	}
+	if (ui_button_render(screen, &player->internal.button_next) == UI_EVENT_CLICKED) {
+		player->on_button_clicked(UI_MEDIA_BUTTON_NEXT);
+	}
+	if (ui_button_render(screen, &player->internal.button_forward) == UI_EVENT_CLICKED) {
+		player->on_button_clicked(UI_MEDIA_BUTTON_FWD);
+	}
 
 	struct Audio_Len track_pos = seconds_to_len(player->track_pos_sec);
 	struct Audio_Len track_len = seconds_to_len(player->track_len_sec);
@@ -505,11 +438,6 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 	}
 }
 
-static void on_dialog_close_button(struct Ui_Button *btn)
-{
-	((struct Ui_Dialog *) btn->user_data)->is_open = false;
-}
-
 void ui_dialog_render(struct Screen *screen, struct Ui_Dialog *dialog)
 {
 	PRECONDITION(screen != NULL);
@@ -527,42 +455,39 @@ void ui_dialog_render(struct Screen *screen, struct Ui_Dialog *dialog)
 		.is_selectable = false
 	};
 	static struct Ui_Button close_btn = {0};
-	close_btn.user_data = dialog;
-	ui_button_init(screen, &close_btn, "close", UI_DIALOG_X_END-50, UI_DIALOG_Y_END-50, "CLOSE ", on_dialog_close_button);
+	ui_button_init(screen, &close_btn, "CLOSE", UI_DIALOG_X_END-50, UI_DIALOG_Y_END-50);
 	close_btn.outline.x -= close_btn.outline.w-UI_BUTTON_HEIGHT;
 
-	ui_button_render(screen, &close_btn);
+	if (ui_button_render(screen, &close_btn) == UI_EVENT_CLICKED) {
+		dialog->is_open = false;
+		return;
+	}
+
+
 	ui_box_render(screen, &box);
 	if (dialog->render_content != NULL) {
 		dialog->render_content(screen);
 	}
 }
 
-static void on_int_chooser_clicked(struct Ui_Button *btn)
-{
-	struct Ui_Chooser_Integer *chooser = (struct Ui_Chooser_Integer *) btn->user_data;
-	if (strcmp(btn->id, "increase") == 0) {
-		if (chooser->cur_value+chooser->steps <= chooser->max_value) {
-			chooser->cur_value += chooser->steps;
-		}
-	}
-	else if (strcmp(btn->id, "decrease") == 0) {
-		if (chooser->cur_value-chooser->steps >= chooser->min_value) {
-			chooser->cur_value -= chooser->steps;
-		}
-	}
-
-}
 #define UI_CHOOSER_BUTTON_WIDTH 40
 void ui_chooser_integer_render(struct Screen *screen, struct Ui_Chooser_Integer *chooser)
 {
-	struct Ui_Button btn_decrease = {.user_data = chooser};
-	struct Ui_Button btn_increase = {.user_data = chooser};
+	struct Ui_Button btn_decrease;
+	ui_button_init(
+		screen,
+		&btn_decrease,
+		"<-",
+		chooser->outline.x + chooser->x_value_offset,
+		chooser->outline.y);
 
-	ui_button_init(screen, &btn_decrease, "decrease",
-		chooser->outline.x + chooser->x_value_offset, chooser->outline.y, "<-", on_int_chooser_clicked);
-	ui_button_init(screen, &btn_increase, "increase",
-		chooser->outline.x+chooser->outline.w-UI_CHOOSER_BUTTON_WIDTH,chooser->outline.y, "->", on_int_chooser_clicked);
+	struct Ui_Button btn_increase;
+	ui_button_init(
+		screen,
+		&btn_increase,
+		"->",
+		chooser->outline.x+chooser->outline.w-UI_CHOOSER_BUTTON_WIDTH,
+		chooser->outline.y);
 
 	btn_decrease.outline.w = UI_CHOOSER_BUTTON_WIDTH;
 	btn_increase.outline.w = UI_CHOOSER_BUTTON_WIDTH;
@@ -582,6 +507,14 @@ void ui_chooser_integer_render(struct Screen *screen, struct Ui_Chooser_Integer 
 		val_buffer);
 
 
-	ui_button_render(screen, &btn_decrease);
-	ui_button_render(screen, &btn_increase);
+	if (ui_button_render(screen, &btn_increase) == UI_EVENT_CLICKED) {
+		if (chooser->cur_value+chooser->steps <= chooser->max_value) {
+			chooser->cur_value += chooser->steps;
+		}
+	}
+	if (ui_button_render(screen, &btn_decrease) == UI_EVENT_CLICKED) {
+		if (chooser->cur_value-chooser->steps >= chooser->min_value) {
+			chooser->cur_value -= chooser->steps;
+		}
+	}
 }

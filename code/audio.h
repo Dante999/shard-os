@@ -16,6 +16,7 @@ enum Play_Status {
 	PLAY_STATUS_FINISHED
 };
 
+void audio_init(void);
 Result audio_play_url(const char *url);
 Result audio_play_file(const char *filepath);
 Result audio_get_metadata(struct Audio_Metadata *metadata);
@@ -29,7 +30,7 @@ Result audio_open(void);
 void audio_close(void);
 int audio_get_current_pos_in_secs(void);
 void audio_set_pos(int pos_secs);
-float audio_get_gain(void);
-void audio_set_gain(float gain);
+int audio_get_volume(void);
+void audio_set_volume(int volume);
 
 #endif // AUDIO_H

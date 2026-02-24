@@ -26,6 +26,7 @@ struct Config {
 	struct Color screen_color_background;
 
 	char audio_device_name[255];
+	int volume;
 };
 
 extern struct Config g_config;

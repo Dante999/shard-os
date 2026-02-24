@@ -52,7 +52,6 @@ static struct Shard_Audio {
 	enum Play_Status play_status;
 	bool              is_format_set;
 	size_t bytes_feed;
-	float gain;
 	struct Audio_Metadata metadata;
 	struct Track_Info {
 		long rate_hz;
@@ -428,8 +427,7 @@ Result audio_open(void)
 		return result_make(false, "unable to create audio stream: %s", SDL_GetError());
 	}
 
-	g_audio.gain = 1.0f;
-	audio_set_gain(g_audio.gain);
+	audio_set_volume(g_config.volume);
 	int decoder_error = -1;
 	g_audio.decode_handle = mpg123_new(NULL, &decoder_error);
 	if (g_audio.decode_handle == NULL) {
@@ -520,14 +518,14 @@ int audio_get_buffered_percent(void)
 	return audio_get_buffered_bytes()*100/MAX_FEED_CAPACITY;
 }
 
-float audio_get_gain(void)
+int audio_get_volume(void)
 {
-	return SDL_GetAudioStreamGain(g_audio.stream);
+	return (int)(SDL_GetAudioStreamGain(g_audio.stream) * 100.0f);
 }
 
-void audio_set_gain(float gain)
+void audio_set_volume(int volume)
 {
-	SDL_SetAudioStreamGain(g_audio.stream, gain);
+	SDL_SetAudioStreamGain(g_audio.stream, (float)volume / 100.f);
 }
 
 

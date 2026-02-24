@@ -91,41 +91,45 @@ static void play_next_track(void)
 		tmp_index++;
 	}
 }
-static void on_media_player_clicked(const char *button_id)
+static void on_media_player_clicked(enum Ui_Media_Button btn)
 {
-	log_debug("mediaplayer button clicked: %s\n", button_id);
+	switch(btn) {
 
-	if (strcmp(button_id, "play_button") == 0) {
-		if (audio_is_playing()) {
-			log_trace("pausing audio...\n");
-			g_player.is_playing = false;
-			audio_pause();
-		}
-		else {
-			log_trace("resuming audio...\n");
-			g_player.is_playing = true;
-			audio_resume();
-		}
-	}
-	else if (strcmp(button_id, "rewind_button") == 0) {
-		if (g_player.track_pos_sec > 10) {
-			g_player.track_pos_sec -= 10;
-			audio_set_pos(g_player.track_pos_sec);
-		}
-	}
-	else if (strcmp(button_id, "forward_button") == 0) {
-		if (g_player.track_pos_sec < g_player.track_len_sec-10) {
-			g_player.track_pos_sec += 10;
-			audio_set_pos(g_player.track_pos_sec);
-		}
-	}
-	else if (strcmp(button_id, "prev_button") == 0) {
-		play_previous_track();
-	}
-	else if (strcmp(button_id, "next_button") == 0) {
-		play_next_track();
-	}
+		case UI_MEDIA_BUTTON_PLAY:
+			if (audio_is_playing()) {
+				log_trace("pausing audio...\n");
+				g_player.is_playing = false;
+				audio_pause();
+			}
+			else {
+				log_trace("resuming audio...\n");
+				g_player.is_playing = true;
+				audio_resume();
+			}
+			break;
 
+		case UI_MEDIA_BUTTON_REW:
+			if (g_player.track_pos_sec > 10) {
+				g_player.track_pos_sec -= 10;
+				audio_set_pos(g_player.track_pos_sec);
+			}
+			break;
+
+		case UI_MEDIA_BUTTON_FWD:
+			if (g_player.track_pos_sec < g_player.track_len_sec-10) {
+				g_player.track_pos_sec += 10;
+				audio_set_pos(g_player.track_pos_sec);
+			}
+			break;
+
+		case UI_MEDIA_BUTTON_PREV:
+			play_previous_track();
+			break;
+
+		case UI_MEDIA_BUTTON_NEXT:
+			play_next_track();
+			break;
+	}
 }
 
 static void on_filebrowser_clicked(int index)

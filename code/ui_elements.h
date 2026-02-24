@@ -3,6 +3,12 @@
 
 #include "screen.h"
 
+enum Ui_Event {
+	UI_EVENT_NONE,
+	UI_EVENT_SELECTED,
+	UI_EVENT_CLICKED,
+};
+
 
 ////////////////////////////////////////////////////////////////////////////////
  enum Ui_Border {
@@ -27,31 +33,26 @@ enum Button_Type {
 };
 
 struct Ui_Button {
-	char id[40];
 	char text[40];
 	struct Ui_Outline outline;
 	enum Button_Type type;
-	void (*on_click)(struct Ui_Button *btn);
 	int font_size;
 	bool is_selectable;
-	void *user_data;
 };
 
 void ui_button_init(
 	struct Screen *screen,
 	struct Ui_Button *btn,
-	const char *id, int x, int y,
 	const char *text,
-	void (*on_click)(struct Ui_Button *btn));
+	int x, int y);
 
 void ui_button_init_icon(
 	struct Screen *screen,
 	struct Ui_Button *btn,
-	const char *id, int x, int y, int w,
 	const char *icon,
-	void (*on_click)(struct Ui_Button *btn));
+	int x, int y, int w);
 
-void ui_button_render(struct Screen *screen, struct Ui_Button *btn);
+enum Ui_Event ui_button_render(struct Screen *screen, struct Ui_Button *btn);
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -133,11 +134,13 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 
 
 ////////////////////////////////////////////////////////////////////////////////
-#define UI_MEDIA_PLAYER_PLAY_BUTTON_ID "play_button"
-#define UI_MEDIA_PLAYER_REW_BUTTON_ID  "rewind_button"
-#define UI_MEDIA_PLAYER_PREV_BUTTON_ID "prev_button"
-#define UI_MEDIA_PLAYER_FWD_BUTTON_ID  "forward_button"
-#define UI_MEDIA_PLAYER_NEXT_BUTTON_ID "next_button"
+enum Ui_Media_Button {
+	UI_MEDIA_BUTTON_PLAY,
+	UI_MEDIA_BUTTON_REW,
+	UI_MEDIA_BUTTON_PREV,
+	UI_MEDIA_BUTTON_FWD,
+	UI_MEDIA_BUTTON_NEXT
+};
 struct Ui_Media_Player {
 	int x;
 	int y;
@@ -149,7 +152,7 @@ struct Ui_Media_Player {
 	int track_pos_sec;
 	int track_len_sec;
 	bool is_playing;
-	void (*on_button_clicked)(const char *id);
+	void (*on_button_clicked)(enum Ui_Media_Button btn);
 	struct {
 		struct {
 			int x;
@@ -168,7 +171,7 @@ void ui_media_player_init(
 	struct Screen *screen,
 	struct Ui_Media_Player *player,
 	int x, int y, int w, int h,
-	void (*on_button_clicked)(const char *id));
+	void (*on_button_clicked)(enum Ui_Media_Button btn));
 
 void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *player);
 
