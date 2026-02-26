@@ -92,6 +92,10 @@ static void set_audio_format_if_needed(void)
 		src_spec.freq = (int)g_audio.track_info.rate_hz;
 		SDL_SetAudioStreamFormat(g_audio.stream, &src_spec, NULL);
 
+		if (g_audio.type == STREAM_TYPE_FILE) {
+			off_t samples = mpg123_length(g_audio.decode_handle);
+			g_audio.metadata.length_secs = (double) samples / (double)g_audio.track_info.rate_hz;
+		}
 		g_audio.is_format_set = true;
 	}
 }
@@ -412,6 +416,7 @@ Result audio_play_file(const char *filepath)
 	}
 
 	g_audio.type = STREAM_TYPE_FILE;
+	set_audio_format_if_needed();
 	audio_resume();
 
 	return result_make_success();
