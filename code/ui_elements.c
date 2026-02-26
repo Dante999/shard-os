@@ -573,7 +573,7 @@ enum Ui_Event ui_chooser_render(struct Screen *screen, struct Ui_Chooser *choose
 		assert(false && "unhandled chooser type!");
 	}
 
-	return UI_EVENT_NONE;
+	return ret;
 }
 
 

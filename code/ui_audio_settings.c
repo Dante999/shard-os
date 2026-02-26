@@ -39,14 +39,12 @@ void on_enter_audio_settings(void)
 
 void on_render_audio_settings(struct Screen *screen)
 {
-	ui_chooser_render(screen, &g_volume_chooser);
-
-	if (g_volume_chooser.data.int_chooser.cur_value != g_config.volume) {
+	if (ui_chooser_render(screen, &g_volume_chooser) == UI_EVENT_MODIFIED) {
 		g_config.volume = g_volume_chooser.data.int_chooser.cur_value;
 		audio_set_volume(g_config.volume);
 	}
 	
-	ui_chooser_render(screen, &g_device_chooser);
+	ui_chooser_render(screen, &g_device_chooser); // TODO
 
 }
 void on_exit_audio_settings(void)
