@@ -252,7 +252,7 @@ void ui_clickable_list_render(struct Screen *screen, struct Ui_Clickable_List *l
 	snprintf(btn_index->text, sizeof(btn_index->text), "%zu", list->internal.page_index+1);
 
 	if (ui_button_render(screen, btn_prev) == UI_EVENT_CLICKED) {
-		log_debug("prev page: currently %zu\n", list->internal.page_index); 
+		log_debug("prev page: currently %zu\n", list->internal.page_index);
 		if (list->internal.page_index > 0) {
 			--list->internal.page_index;
 		}
@@ -438,7 +438,7 @@ void ui_media_player_render(struct Screen *screen, struct Ui_Media_Player *playe
 	}
 }
 
-void ui_dialog_render(struct Screen *screen, struct Ui_Dialog *dialog)
+enum Ui_Event ui_dialog_render(struct Screen *screen, struct Ui_Dialog *dialog)
 {
 	PRECONDITION(screen != NULL);
 	PRECONDITION(dialog != NULL);
@@ -459,8 +459,7 @@ void ui_dialog_render(struct Screen *screen, struct Ui_Dialog *dialog)
 	close_btn.outline.x -= close_btn.outline.w-UI_BUTTON_HEIGHT;
 
 	if (ui_button_render(screen, &close_btn) == UI_EVENT_CLICKED) {
-		dialog->is_open = false;
-		return;
+		return UI_EVENT_EXIT;
 	}
 
 
@@ -468,17 +467,33 @@ void ui_dialog_render(struct Screen *screen, struct Ui_Dialog *dialog)
 	if (dialog->render_content != NULL) {
 		dialog->render_content(screen);
 	}
+	return UI_EVENT_NONE;
 }
 
 #define UI_CHOOSER_BUTTON_WIDTH 40
-void ui_chooser_integer_render(struct Screen *screen, struct Ui_Chooser_Integer *chooser)
+void ui_chooser_int_init(struct Ui_Chooser *chooser, int cur_value, int min_value, int max_value, int steps)
+{
+	chooser->type = UI_CHOOSER_TYPE_INT;
+	chooser->data.int_chooser.cur_value = cur_value;
+	chooser->data.int_chooser.min_value = min_value;
+	chooser->data.int_chooser.max_value = max_value;
+	chooser->data.int_chooser.steps     = steps;
+}
+void ui_chooser_str_init(struct Ui_Chooser *chooser)
+{
+	chooser->type = UI_CHOOSER_TYPE_STR;
+	chooser->data.str_chooser.selected = 0;
+	chooser->data.str_chooser.count    = 0;
+}
+
+enum Ui_Event ui_chooser_render(struct Screen *screen, struct Ui_Chooser *chooser)
 {
 	struct Ui_Button btn_decrease;
 	ui_button_init(
 		screen,
 		&btn_decrease,
 		"<-",
-		chooser->outline.x + chooser->x_value_offset,
+		chooser->outline.x + chooser->name_width,
 		chooser->outline.y);
 
 	struct Ui_Button btn_increase;
@@ -497,24 +512,133 @@ void ui_chooser_integer_render(struct Screen *screen, struct Ui_Chooser_Integer 
 		UI_BUTTON_FONT_SIZE, chooser->name);
 
 	char val_buffer[255];
-	snprintf(val_buffer, sizeof(val_buffer), "%d", chooser->cur_value);
-	screen_draw_text(
-		screen,btn_decrease.outline.x+20+
-		(btn_increase.outline.x-
-		(btn_decrease.outline.x+btn_decrease.outline.w))/2,
-		chooser->outline.y+UI_BUTTON_BORDER_WIDTH,
-		UI_BUTTON_FONT_SIZE,
-		val_buffer);
+
+	enum Ui_Event ret = UI_EVENT_NONE;
+
+	// NOTE: always render all buttons, even if one is already clicked otherwise
+	// the oposite button will appear flickering
+
+	if (chooser->type == UI_CHOOSER_TYPE_INT) {
+		struct Ui_Chooser_Int *int_chooser = &chooser->data.int_chooser;
+		snprintf(val_buffer, sizeof(val_buffer), "%d", int_chooser->cur_value);
+		screen_draw_text(
+			screen,btn_decrease.outline.x+20+
+			(btn_increase.outline.x-
+			(btn_decrease.outline.x+btn_decrease.outline.w))/2,
+			chooser->outline.y+UI_BUTTON_BORDER_WIDTH,
+			UI_BUTTON_FONT_SIZE,
+			val_buffer);
 
 
-	if (ui_button_render(screen, &btn_increase) == UI_EVENT_CLICKED) {
-		if (chooser->cur_value+chooser->steps <= chooser->max_value) {
-			chooser->cur_value += chooser->steps;
+		if (ui_button_render(screen, &btn_increase) == UI_EVENT_CLICKED) {
+			if (int_chooser->cur_value+int_chooser->steps <= int_chooser->max_value) {
+				int_chooser->cur_value += int_chooser->steps;
+				ret = UI_EVENT_MODIFIED;
+			}
+		}
+		if (ui_button_render(screen, &btn_decrease) == UI_EVENT_CLICKED) {
+			if (int_chooser->cur_value-int_chooser->steps >= int_chooser->min_value) {
+				int_chooser->cur_value -= int_chooser->steps;
+				ret = UI_EVENT_MODIFIED;
+			}
 		}
 	}
-	if (ui_button_render(screen, &btn_decrease) == UI_EVENT_CLICKED) {
-		if (chooser->cur_value-chooser->steps >= chooser->min_value) {
-			chooser->cur_value -= chooser->steps;
+	else if (chooser->type == UI_CHOOSER_TYPE_STR) {
+		struct Ui_Chooser_Str *str_chooser = &chooser->data.str_chooser;
+
+		strncpy(val_buffer, str_chooser->items[str_chooser->selected], 20);
+		screen_draw_text(
+				screen,btn_decrease.outline.x+20+
+				(btn_increase.outline.x-
+				 (btn_decrease.outline.x+btn_decrease.outline.w))/2,
+				chooser->outline.y+UI_BUTTON_BORDER_WIDTH,
+				UI_BUTTON_FONT_SIZE,
+				val_buffer);
+
+
+		if (ui_button_render(screen, &btn_increase) == UI_EVENT_CLICKED) {
+			if (str_chooser->selected < str_chooser->count-1) {
+				++str_chooser->selected;
+				ret = UI_EVENT_MODIFIED;
+			}
+		}
+		if (ui_button_render(screen, &btn_decrease) == UI_EVENT_CLICKED) {
+			if (str_chooser->selected > 0) {
+				--str_chooser->selected;
+				ret = UI_EVENT_MODIFIED;
+			}
 		}
 	}
+	else {
+		assert(false && "unhandled chooser type!");
+	}
+
+	return UI_EVENT_NONE;
+}
+
+
+//void ui_chooser_string_render(struct Screen *screen, struct Ui_Chooser_String *chooser)
+//{
+//	struct Ui_Button btn_decrease;
+//	ui_button_init(
+//		screen,
+//		&btn_decrease,
+//		"<-",
+//		chooser->outline.x + chooser->x_value_offset,
+//		chooser->outline.y);
+//
+//	struct Ui_Button btn_increase;
+//	ui_button_init(
+//		screen,
+//		&btn_increase,
+//		"->",
+//		chooser->outline.x+chooser->outline.w-UI_CHOOSER_BUTTON_WIDTH,
+//		chooser->outline.y);
+//
+//	btn_decrease.outline.w = UI_CHOOSER_BUTTON_WIDTH;
+//	btn_increase.outline.w = UI_CHOOSER_BUTTON_WIDTH;
+//
+//	screen_draw_text(screen, chooser->outline.x,
+//		chooser->outline.y+UI_BUTTON_BORDER_WIDTH,
+//		UI_BUTTON_FONT_SIZE, chooser->name);
+//
+//	char val_buffer[255];
+//	strncpy(val_buffer, chooser->items[chooser->selected], 20);
+//	screen_draw_text(
+//		screen,btn_decrease.outline.x+20+
+//		(btn_increase.outline.x-
+//		(btn_decrease.outline.x+btn_decrease.outline.w))/2,
+//		chooser->outline.y+UI_BUTTON_BORDER_WIDTH,
+//		UI_BUTTON_FONT_SIZE,
+//		val_buffer);
+//
+//
+//	if (ui_button_render(screen, &btn_increase) == UI_EVENT_CLICKED) {
+//		if (chooser->selected < chooser->count-1) {
+//			++chooser->selected;
+//		}
+//	}
+//	if (ui_button_render(screen, &btn_decrease) == UI_EVENT_CLICKED) {
+//		if (chooser-> selected > 0) {
+//			--chooser->selected;
+//		}
+//	}
+//}
+
+
+Result ui_chooser_str_append(struct Ui_Chooser *chooser, const char *s)
+{
+	struct Ui_Chooser_Str *str_chooser = &chooser->data.str_chooser;
+	if (str_chooser->count < UI_CHOOSER_STRING_MAX_ITEMS) {
+		strncpy(str_chooser->items[str_chooser->count++], s, UI_CHOOSER_STRING_MAX_ITEM_LEN);
+		return result_make_success();
+	}
+
+	return result_make(false, "string chooser max items reachted!");
+}
+
+void ui_chooser_str_clear(struct Ui_Chooser *chooser)
+{
+	chooser->data.str_chooser.selected = 0;
+	chooser->data.str_chooser.count    = 0;
 }

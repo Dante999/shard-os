@@ -7,6 +7,8 @@ enum Ui_Event {
 	UI_EVENT_NONE,
 	UI_EVENT_SELECTED,
 	UI_EVENT_CLICKED,
+	UI_EVENT_EXIT,
+	UI_EVENT_MODIFIED,
 };
 
 
@@ -87,23 +89,63 @@ struct Ui_Dialog{
 	const char *name;
 	struct Ui_Outline outline;
 	void (*render_content)(struct Screen *screen);
-	bool is_open;
 };
-void ui_dialog_render(struct Screen *screen, struct Ui_Dialog *dialog);
+enum Ui_Event ui_dialog_render(struct Screen *screen, struct Ui_Dialog *dialog);
 
 
 ////////////////////////////////////////////////////////////////////////////////
-struct Ui_Chooser_Integer {
+//struct Ui_Chooser_Integer {
+//	const char *name;
+//	struct Ui_Outline outline;
+//	int x_value_offset;
+//	int min_value;
+//	int max_value;
+//	int cur_value;
+//	int steps;
+//};
+//void ui_chooser_integer_render(struct Screen *screen, struct Ui_Chooser_Integer *chooser);
+
+#define UI_CHOOSER_STRING_MAX_ITEMS    40
+#define UI_CHOOSER_STRING_MAX_ITEM_LEN 80
+//struct Ui_Chooser_String {
+//	const char *name;
+//	struct Ui_Outline outline;
+//	int x_value_offset;
+//	char items[UI_CHOOSER_STRING_MAX_ITEMS][UI_CHOOSER_STRING_MAX_ITEM_LEN];
+//	size_t count;
+//	size_t selected;
+//};
+
+enum Ui_Chooser_Type {
+	UI_CHOOSER_TYPE_INT,
+	UI_CHOOSER_TYPE_STR
+};
+
+struct Ui_Chooser {
 	const char *name;
 	struct Ui_Outline outline;
-	int x_value_offset;
-	int min_value;
-	int max_value;
-	int cur_value;
-	int steps;
+	int name_width;
+	enum Ui_Chooser_Type type;
+	union {
+		struct Ui_Chooser_Int {
+			int cur_value;
+			int min_value;
+			int max_value;
+			int steps;
+		} int_chooser;
+		struct Ui_Chooser_Str {
+			char items[UI_CHOOSER_STRING_MAX_ITEMS][UI_CHOOSER_STRING_MAX_ITEM_LEN];
+			size_t count;
+			size_t selected;
+		} str_chooser;
+	} data;
 };
-void ui_chooser_integer_render(struct Screen *screen, struct Ui_Chooser_Integer *chooser);
+void ui_chooser_int_init(struct Ui_Chooser *chooser, int cur_value, int min_value, int max_value, int steps);
+void ui_chooser_str_init(struct Ui_Chooser *chooser);
+enum Ui_Event ui_chooser_render(struct Screen *screen, struct Ui_Chooser *chooser);
 
+Result ui_chooser_str_append(struct Ui_Chooser *chooser, const char *s);
+void   ui_chooser_str_clear(struct Ui_Chooser *chooser);
 
 ////////////////////////////////////////////////////////////////////////////////
 #define UI_LIST_MAX_ITEMS    40
