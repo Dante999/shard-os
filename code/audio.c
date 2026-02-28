@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "libcutils/logger.h"
 #include "libcutils/util_makros.h"
@@ -425,6 +426,11 @@ Result audio_play_file(const char *filepath)
 Result audio_open(void)
 {
 	log_info("opening audio device...\n");
+
+	char buffer[1024];
+	snprintf(buffer, sizeof(buffer), "%s/hooks/on_audio_open.sh", g_config.resources_dir);
+	system(buffer);
+
 	SDL_AudioDeviceID audio_device = get_audio_device_or_default(g_config.audio_device_name);
 
 	g_audio.stream = SDL_OpenAudioDeviceStream(audio_device, NULL, fill_sdl_stream_callback, NULL);
@@ -450,6 +456,10 @@ Result audio_open(void)
 void audio_close(void)
 {
 	log_info("closing audio device...\n");
+
+	char buffer[1024];
+	snprintf(buffer, sizeof(buffer), "%s/hooks/on_audio_close.sh", g_config.resources_dir);
+	system(buffer);
 
 	if (g_audio.stream != NULL) {
 		SDL_DestroyAudioStream(g_audio.stream);

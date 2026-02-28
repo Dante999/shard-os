@@ -3,4 +3,4 @@
 *.cache
 /resources/data/jukebox/*
 /resources/data/audiobooks/*
-
+/resources/hooks
