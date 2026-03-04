@@ -87,6 +87,7 @@ void ui_main_init(struct Screen *screen)
 	app_radio_init(screen  , "data/radiostations.conf");
 	app_jukebox_init(screen, "data/jukebox");
 	app_dice_init(screen);
+	screensaver_reset();
 }
 
 static void ui_main_draw_header_icons(struct Screen *screen, int x_left, int y_top, int height)
