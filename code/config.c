@@ -79,6 +79,7 @@ Result config_init(const char *resources_path)
 	}
 
 	strncpy(g_config.audio_device_name, config_file_gets(&cfg, "audio_device_name"), sizeof(g_config.audio_device_name));
+	g_config.screensaver_delay_min = config_file_geti(&cfg, "screensaver_delay_minutes");
 	g_config.volume = 100;
 	return result_make_success();
 }

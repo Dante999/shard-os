@@ -18,7 +18,7 @@
 #define RINGBUFFER_SIZE (1024 * 1024)
 #define MAX_FEED_CAPACITY (1024 *1024)
 #define DOWNLOAD_BUFFER_SIZE RINGBUFFER_SIZE
-#define USE_DOUBLE_BUFFER
+
 enum Stream_Type {
 	STREAM_TYPE_NONE,
 	STREAM_TYPE_FILE,
@@ -389,7 +389,22 @@ Result audio_play_url(const char *url)
 		return result_make(false, "Failed to start curl thread\n");
 	}
 
-	SDL_Delay(1000);
+	// TODO: smarter way of doing this, e.g. play silence until buffer is
+	// filled enough or something. Waiting here just blocks screen
+	// refreshing.
+	while (true) {
+		pthread_mutex_lock(&g_audio.stream_by_url.lock);
+		size_t bytes_buffered = g_audio.download_buffer.used;
+		pthread_mutex_unlock(&g_audio.stream_by_url.lock);
+
+		log_debug("buffered %zu bytes\n", bytes_buffered);
+		if ((double)bytes_buffered >= (DOWNLOAD_BUFFER_SIZE*0.1)) {
+			break;
+		}
+
+		SDL_Delay(500);
+
+	}
 
 	if (mpg123_open_feed(g_audio.decode_handle) != MPG123_OK) {
 		return result_make(false, "failed to open feed: %s",

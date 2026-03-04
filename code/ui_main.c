@@ -6,6 +6,7 @@
 #include "app_dice.h"
 #include "ui_elements.h"
 #include "ui_audio_settings.h"
+#include "screensaver.h"
 
 #include "libcutils/logger.h"
 #include "libcutils/util_makros.h"
@@ -35,56 +36,6 @@ struct App g_apps[] = {
 	{"Dice"   , app_dice_open   , app_dice_render   , app_dice_close},
 };
 
-
-//struct {
-//	struct Ui_Dialog instance;
-//	bool is_open;
-//	bool first_time_open;
-//} g_dialog;
-
-
-
-
-static bool g_is_sleeping = false;
-
-//static void render_audio_settings(struct Screen *screen)
-//{
-//	static struct Ui_Chooser volume_chooser = {
-//		.name = "Volume",
-//		.outline = {
-//			.x = UI_DIALOG_X_START + SCREEN_BORDER_WIDTH,
-//			.y = UI_DIALOG_Y_START + SCREEN_BORDER_WIDTH,
-//			.w = (UI_DIALOG_X_END - UI_DIALOG_Y_START - SCREEN_BORDER_WIDTH)/2,
-//			.h = 0
-//		},
-//		.name_width = 100,
-//	};
-//	ui_chooser_int_init(&volume_chooser,g_config.volume, 0, 100, 10);
-//	ui_chooser_render(screen, &volume_chooser);
-//
-//	if (volume_chooser.data.int_chooser.cur_value != g_config.volume) {
-//		g_config.volume = volume_chooser.data.int_chooser.cur_value;
-//		audio_set_volume(g_config.volume);
-//	}
-//
-//	static struct Ui_Chooser device_chooser = {
-//		.name = "Device",
-//		.outline = {
-//			.x = UI_DIALOG_X_START + SCREEN_BORDER_WIDTH,
-//			.y = UI_DIALOG_Y_START + SCREEN_BORDER_WIDTH + 40,
-//			.w = (UI_DIALOG_X_END - UI_DIALOG_Y_START - SCREEN_BORDER_WIDTH)/2,
-//			.h = 0
-//		},
-//		.name_width = 100
-//	};
-//	ui_chooser_str_init(&device_chooser);
-//	ui_chooser_str_append(&device_chooser, "Headset");
-//	ui_chooser_str_append(&device_chooser, "HDMI Screen");
-//	ui_chooser_str_append(&device_chooser, "FM Sender");
-//	ui_chooser_render(screen, &device_chooser);
-//}
-
-
 struct {
 	struct Ui_Dialog instance;
 	bool is_open;
@@ -98,19 +49,8 @@ struct Icon {
 	void (*on_exit)(void);
 };
 
-static void on_header_icon_close(void);
-
-
-static void on_enter_sleep(void)
-{
-	log_info("entering sleep mode\n"),
-	g_is_sleeping = true;
-	on_header_icon_close();
-}
-
-static int g_icons_index = -1;
+static int g_active_icon_idx = -1;
 struct Icon g_icons[] = {
-	{.name="[SLEEP]", .on_enter=on_enter_sleep         , .on_render=NULL                    , .on_exit=NULL},
 	{.name="[AUDIO]", .on_enter=on_enter_audio_settings, .on_render=on_render_audio_settings, .on_exit=NULL},
 };
 
@@ -118,7 +58,7 @@ static void on_header_icon_open(int index)
 {
 	PRECONDITION(index < (int)ARRAY_SIZE(g_icons));
 
-	g_icons_index = index;
+	g_active_icon_idx = index;
 	g_dialog.first_time_open = true;
 	g_dialog.is_open = true;
 	g_dialog.instance.name = g_icons[index].name;
@@ -127,19 +67,18 @@ static void on_header_icon_open(int index)
 	if (g_icons[index].on_enter != NULL) {
 		g_icons[index].on_enter();
 	}
-	//icon->render_dialog(screen);
 }
 
 static void on_header_icon_close(void)
 {
 	log_debug("closing dialog\n");
 	g_dialog.is_open = false;
-	
-	if (g_icons_index != -1) {
-		if (g_icons[g_icons_index].on_exit != NULL) {
-			g_icons[g_icons_index].on_exit();
+
+	if (g_active_icon_idx != -1) {
+		if (g_icons[g_active_icon_idx].on_exit != NULL) {
+			g_icons[g_active_icon_idx].on_exit();
 		}
-		g_icons_index = -1;
+		g_active_icon_idx = -1;
 	}
 }
 
@@ -148,8 +87,6 @@ void ui_main_init(struct Screen *screen)
 	app_radio_init(screen  , "data/radiostations.conf");
 	app_jukebox_init(screen, "data/jukebox");
 	app_dice_init(screen);
-
-
 }
 
 static void ui_main_draw_header_icons(struct Screen *screen, int x_left, int y_top, int height)
@@ -177,7 +114,6 @@ static void ui_main_draw_header_icons(struct Screen *screen, int x_left, int y_t
 
 static void ui_main_draw_header(struct Screen *screen)
 {
-	//log_debug("mouse: x=%4d y=%4d\n", screen->mouse_x, screen->mouse_y);
 	screen_draw_box(
 		screen,
 		SCREEN_BORDER_WIDTH,
@@ -190,7 +126,7 @@ static void ui_main_draw_header(struct Screen *screen)
 	screen_draw_text(screen, 20, UI_STATUS_BAR_TEXT_Y_START+g_config.screen_font_size_l, g_config.screen_font_size_s, "v0.1");
 
 	time_t now = time(NULL);
-	struct tm *tm = localtime(&now);           /* use gmtime(&now) for UTC */
+	struct tm *tm = localtime(&now);
 	char buf[32];
 
 	ui_main_draw_header_icons(screen, UI_STATUS_BAR_X_START_RIGHT, UI_STATUS_BAR_TEXT_Y_START+10, UI_STATUS_BAR_HEIGHT);
@@ -198,8 +134,9 @@ static void ui_main_draw_header(struct Screen *screen)
 	strftime(buf, sizeof buf, "%d.%m.%Y", tm);
 	screen_draw_text(screen, UI_STATUS_BAR_DATETIME_X_START, UI_STATUS_BAR_TEXT_Y_START, g_config.screen_font_size_m, buf);
 
-	strftime(buf, sizeof buf, " %H:%M:%S", tm); // extra space to be aligned
-						    // with date
+	// extra space in front to be aligned with date the line above
+	strftime(buf, sizeof buf, " %H:%M:%S", tm);
+
 	screen_draw_text(screen, UI_STATUS_BAR_DATETIME_X_START, UI_STATUS_BAR_TEXT_Y_START+g_config.screen_font_size_m, g_config.screen_font_size_m, buf);
 
 }
@@ -243,15 +180,6 @@ static void ui_draw_app_icons(struct Screen *screen)
 		ui_box_render(screen, &box);
 
 
-#if 0
-		struct Screen_Dimension text_size = screen_get_text_dimension(screen, APP_BOX_FONT_SIZE, g_apps[i].name);
-		int clearance = (APP_BOX_WIDTH-text_size.w)/2;
-
-		if (clearance < 0) clearance = 0;
-		screen_draw_text(screen, x+clearance, y+APP_TEXT_Y_OFFSET, APP_BOX_FONT_SIZE, g_apps[i].name);
-#else
-
-		// TODO: Reuse and reduce complexity
 		const char *appname = g_apps[i].name;
 		const char *newline = strchr(appname, '\n');
 
@@ -279,15 +207,25 @@ static void ui_draw_app_icons(struct Screen *screen)
 			screen_draw_text(screen, x+clearance, y+APP_TEXT_Y_OFFSET+APP_BOX_FONT_SIZE+3, APP_BOX_FONT_SIZE, buffer);
 
 		}
-#endif
+
 	}
 }
 
 void ui_main_render(struct Screen *screen)
 {
-	if (g_is_sleeping) {
-		if(screen->mouse_clicked) g_is_sleeping = false;
+	const bool is_screensaver_active = screensaver_active();
+
+	if (is_screensaver_active && !screen->mouse_clicked) {
 		return;
+	}
+
+	if (screen->mouse_clicked) {
+
+		// ignore screen wakeup mouse click
+		if (is_screensaver_active) {
+			screen->mouse_clicked = false;
+		}
+		screensaver_reset();
 	}
 
 	ui_main_draw_header(screen);

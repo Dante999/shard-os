@@ -27,6 +27,7 @@ struct Config {
 
 	char audio_device_name[255];
 	int volume;
+	int screensaver_delay_min;
 };
 
 extern struct Config g_config;
